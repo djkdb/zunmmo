@@ -70,6 +70,24 @@
     color: var(--color-ink-950);
   }
 
+  /* Achievement medallions: the bevel takes the rarity color, the outline stays ink. */
+  .pixel-frame[data-rarity="common"] {
+    --pf-hi: var(--color-rarity-common-light);
+    --pf-lo: var(--color-rarity-common);
+  }
+  .pixel-frame[data-rarity="rare"] {
+    --pf-hi: var(--color-rarity-rare-light);
+    --pf-lo: var(--color-rarity-rare);
+  }
+  .pixel-frame[data-rarity="epic"] {
+    --pf-hi: var(--color-rarity-epic-light);
+    --pf-lo: var(--color-rarity-epic);
+  }
+  .pixel-frame[data-rarity="legendary"] {
+    --pf-hi: var(--color-rarity-legendary-light);
+    --pf-lo: var(--color-rarity-legendary);
+  }
+
   /* Selected option (radio cards): accent outline. A focused radio right before it wins. */
   .pixel-frame[data-selected] {
     --pf-outline: var(--color-accent);
@@ -338,6 +356,16 @@
     animation: pixel-flicker 1800ms steps(1, end) infinite;
   }
 
+  /* "+70 XP" rising from a completed quest: 6 stepped hops, then gone (UI_GUIDE §8). */
+  .pixel-xp-float {
+    animation: pixel-xp-float 900ms steps(6, end) forwards;
+    pointer-events: none;
+  }
+  /* One stepped hop for reward moments (level-up badge, new achievement). */
+  .pixel-pop {
+    animation: pixel-pop 480ms steps(1, end) 2;
+  }
+
   /* ───────── Pixel text ───────── */
 
   .font-pixel {
@@ -389,6 +417,26 @@
   }
 }
 
+@keyframes pixel-xp-float {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--pixel-unit) * -12));
+  }
+}
+
+@keyframes pixel-pop {
+  50% {
+    transform: translateY(calc(var(--pixel-unit) * -2));
+  }
+}
+
 @keyframes pixel-skeleton-step {
   0% {
     background-color: var(--color-surface);
@@ -406,8 +454,13 @@
   .pixel-skeleton,
   .pixel-bob,
   .pixel-twinkle,
-  .pixel-flicker {
+  .pixel-flicker,
+  .pixel-pop {
     animation: none;
+  }
+  /* The aria-live announcement carries the XP gain; no motion needed. */
+  .pixel-xp-float {
+    display: none;
   }
   .pixel-spinner > [aria-hidden] {
     opacity: 1;

@@ -25,6 +25,16 @@ export async function userIdFor(email: string): Promise<string> {
   );
 }
 
+/** Jump a character's XP (e.g. to just below a level boundary) without playing the quests. */
+export async function setTotalXp(email: string, totalXp: number): Promise<void> {
+  await withDb((c) =>
+    c.query(
+      "update public.characters set total_xp = $2 where user_id = (select id from auth.users where email = $1)",
+      [email, totalXp],
+    ),
+  );
+}
+
 interface SeedQuest {
   title: string;
   type: QuestType;
@@ -105,10 +115,11 @@ export async function seedAdventure(email: string): Promise<void> {
       { title: "친구와 저녁 먹기", type: "side", difficulty: 1, stat: "soc" },
       { title: "영화 〈듄〉 보기", type: "side", difficulty: 2, stat: "cre", minutes: 160 },
     ];
+    const ids = new Map<string, string>();
     for (const q of quests) {
-      await c.query(
-        `insert into quests (user_id, goal_id, title, type, difficulty, xp, primary_stat, deadline, repeat_rule, estimated_minutes, status, completed_at)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      const { rows } = await c.query(
+        `insert into quests (user_id, goal_id, title, type, difficulty, xp, primary_stat, deadline, repeat_rule, estimated_minutes)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id`,
         [
           userId,
           q.goal ?? null,
@@ -120,10 +131,46 @@ export async function seedAdventure(email: string): Promise<void> {
           q.deadlineInDays === undefined ? null : addDays(today, q.deadlineInDays),
           q.repeat ? JSON.stringify(q.repeat) : null,
           q.minutes ?? null,
-          q.completed ? "completed" : "active",
-          q.completed ? new Date().toISOString() : null,
         ],
       );
+      ids.set(q.title, rows[0].id);
+    }
+
+    // A week of play through the real RPC (so the ledger, stats and totals agree), each
+    // completion then moved back to the day it "happened".
+    const play = async (title: string, daysAgo: number) => {
+      await c.query("begin");
+      await c.query("set local role authenticated");
+      await c.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: userId, role: "authenticated" }),
+      ]);
+      const { rows } = await c.query("select (public.complete_quest($1)).completion_id", [
+        ids.get(title),
+      ]);
+      await c.query("commit");
+      if (daysAgo === 0) return;
+      const date = addDays(today, -daysAgo);
+      const at = new Date(Date.now() - daysAgo * 86_400_000).toISOString();
+      await c.query(
+        "update quest_completions set occurrence_date = $2, completed_at = $3 where id = $1",
+        [rows[0].completion_id, date, at],
+      );
+      await c.query(
+        `update xp_logs set created_at = $3, meta = meta || jsonb_build_object('game_date', $2::text)
+          where completion_id = $1`,
+        [rows[0].completion_id, date, at],
+      );
+    };
+    for (const q of quests.filter((q) => q.completed)) await play(q.title, 3);
+    for (const [daysAgo, titles] of [
+      [6, ["운동 30분", "영단어 30개"]],
+      [5, ["운동 30분", "영단어 30개", "AI 강의 1강 복습하기"]],
+      [4, ["영단어 30개"]],
+      [2, ["운동 30분", "영단어 30개", "AI 강의 1강 복습하기"]],
+      [1, ["운동 30분", "영단어 30개"]],
+      [0, ["영단어 30개"]],
+    ] as const) {
+      for (const title of titles) await play(title, daysAgo);
     }
   });
 }

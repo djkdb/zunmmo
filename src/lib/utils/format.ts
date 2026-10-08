@@ -17,3 +17,9 @@ export function formatMinutes(minutes: number): string {
   if (h === 0) return `${m}분`;
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
 }
+
+/** "2026-10-08" → "10월 8일" (read straight from the game date; no timezone math). */
+export function formatGameDate(date: string): string {
+  const [, month, day] = date.split("-").map(Number);
+  return `${month}월 ${day}일`;
+}

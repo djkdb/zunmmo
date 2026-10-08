@@ -6,3 +6,4 @@ docs
 design
 *.md
 *.generated.ts
+supabase/templates/

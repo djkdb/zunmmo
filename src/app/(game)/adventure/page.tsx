@@ -14,8 +14,12 @@ import { selectBoard } from "@/features/adventure/board";
 import { AdventureSkeleton } from "@/features/adventure/components/AdventureSkeleton";
 import { SectionHeader } from "@/features/adventure/components/SectionHeader";
 import { playerToday, requireCharacter } from "@/features/player/queries";
+import { RecentXpList } from "@/features/progress/components/RecentXpList";
+import { listCompletionsSince, listRecentXp } from "@/features/progress/queries";
+import { QuestAction } from "@/features/quests/components/QuestAction";
 import { listQuestlines, listQuests } from "@/features/quests/queries";
 import { toCardData } from "@/features/quests/view";
+import { isoWeekStart } from "@/lib/game";
 
 export const metadata: Metadata = { title: "모험" };
 
@@ -24,8 +28,13 @@ const questHref = (id: string) => `/quests/${id}`;
 async function Adventure() {
   const player = await requireCharacter();
   const today = playerToday(player);
-  const [quests, questlines] = await Promise.all([listQuests(today), listQuestlines(today)]);
-  const board = selectBoard(quests, questlines, today);
+  const [quests, questlines, completions, recent] = await Promise.all([
+    listQuests(today),
+    listQuestlines(today),
+    listCompletionsSince(isoWeekStart(today)),
+    listRecentXp(3),
+  ]);
+  const board = selectBoard(quests, questlines, today, completions);
   const { character } = player;
 
   return (
@@ -124,6 +133,7 @@ async function Adventure() {
                     xp={quest.xp}
                     completed={doneToday}
                     href={questHref(quest.id)}
+                    action={<QuestAction quest={quest} doneToday={doneToday} />}
                   />
                 ))}
               </ul>
@@ -143,10 +153,28 @@ async function Adventure() {
               <ul className="flex flex-col gap-5">
                 {board.sides.map((q) => (
                   <li key={q.id}>
-                    <QuestCard quest={toCardData(q)} today={today} href={questHref(q.id)} />
+                    <QuestCard
+                      quest={toCardData(q)}
+                      today={today}
+                      href={questHref(q.id)}
+                      action={<QuestAction quest={q} doneToday={false} />}
+                    />
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {recent.length > 0 && (
+            <section aria-labelledby="recent-title" className="flex flex-col gap-2">
+              <SectionHeader
+                id="recent-title"
+                label="RECENT"
+                tone="muted"
+                href="/character"
+                linkLabel="성장 기록"
+              />
+              <RecentXpList logs={recent} />
             </section>
           )}
         </>

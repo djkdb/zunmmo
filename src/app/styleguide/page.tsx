@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { AchievementBadge } from "@/components/game/AchievementBadge";
 import { QuestTypeTag } from "@/components/game/QuestTypeTag";
 import { StatBar } from "@/components/game/StatBar";
 import { ICON_ATLAS } from "@/components/pixel/icons.generated";
@@ -11,7 +12,8 @@ import { PixelSpinner } from "@/components/pixel/PixelSpinner";
 import { PixelStars } from "@/components/pixel/PixelStars";
 import { PixelTag } from "@/components/pixel/PixelTag";
 import { ToastProvider } from "@/components/ui/Toast";
-import { DIFFICULTIES, QUEST_TYPES, STATS } from "@/lib/game";
+import { ACHIEVEMENTS, DIFFICULTIES, QUEST_TYPES, STATS, addDays } from "@/lib/game";
+import { XpWeekChart } from "@/features/progress/components/XpWeekChart";
 
 import { ButtonDemo, CharacterDemo, FormDemo, QuestDemo } from "./_components/Demos";
 import { Section, Specimen } from "./_components/Section";
@@ -21,6 +23,8 @@ export const metadata: Metadata = { title: "Styleguide", robots: { index: false 
 
 /** Dev/preview only. Enable on a deployed preview with ENABLE_STYLEGUIDE=1. */
 const ENABLED = process.env.NODE_ENV !== "production" || process.env.ENABLE_STYLEGUIDE === "1";
+
+const DEMO_TODAY = "2026-10-08";
 
 const DEMO_STAT_XP = { int: 2100, foc: 2600, vit: 950, soc: 320, cre: 600 } as const;
 
@@ -196,6 +200,36 @@ export default function StyleguidePage() {
               {STATS.map((stat) => (
                 <StatBar key={stat} stat={stat} xp={DEMO_STAT_XP[stat]} />
               ))}
+            </div>
+          </Specimen>
+          <Specimen label="AchievementBadge — 희귀도는 베벨 색, 잠김은 실루엣 + 텍스트">
+            <div className="grid w-full max-w-2xl gap-5 sm:grid-cols-2">
+              {(["first_step", "boss_slayer_1", "quests_100", "adventure_streak_30"] as const).map(
+                (id, i) => {
+                  const a = ACHIEVEMENTS.find((x) => x.id === id)!;
+                  return (
+                    <AchievementBadge
+                      key={id}
+                      name={a.name}
+                      description={a.description}
+                      rarity={a.rarity}
+                      icon={a.icon}
+                      unlockedOn={i < 3 ? "10월 8일" : undefined}
+                    />
+                  );
+                },
+              )}
+            </div>
+          </Specimen>
+          <Specimen label="XpWeekChart — 정수 유닛 막대, 목표선·빨간 날 없음">
+            <div className="w-full max-w-md">
+              <XpWeekChart
+                today={DEMO_TODAY}
+                days={[60, 180, 0, 130, 180, 60, 20].map((xp, i) => ({
+                  date: addDays(DEMO_TODAY, i - 6),
+                  xp,
+                }))}
+              />
             </div>
           </Specimen>
         </Section>

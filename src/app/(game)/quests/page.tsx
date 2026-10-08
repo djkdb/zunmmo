@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { EmptyState } from "@/components/game/EmptyState";
 import { QuestCard } from "@/components/game/QuestCard";
 import { QUEST_TYPE_META } from "@/components/game/quest-meta";
+import { listCompletionsSince } from "@/features/progress/queries";
+import { QuestAction } from "@/features/quests/components/QuestAction";
 import { QuestListSkeleton } from "@/features/quests/components/QuestListSkeleton";
 import { listQuests } from "@/features/quests/queries";
 import { CREATABLE_TYPES, type CreatableType } from "@/features/quests/schemas";
@@ -38,7 +40,11 @@ async function QuestBoard({
   const filter = parseFilter(params.type);
   const player = await requireCharacter();
   const today = playerToday(player);
-  const quests = await listQuests(today, { archived: filter === "archived" });
+  const [quests, completions] = await Promise.all([
+    listQuests(today, { archived: filter === "archived" }),
+    listCompletionsSince(today),
+  ]);
+  const doneToday = new Set(completions.map((c) => c.questId));
   const shown =
     filter === "all" || filter === "archived" ? quests : quests.filter((q) => q.type === filter);
   const open = shown.filter(
@@ -105,7 +111,12 @@ async function QuestBoard({
           <ul className="flex flex-col gap-5">
             {open.map((q) => (
               <li key={q.id}>
-                <QuestCard quest={toCardData(q)} today={today} href={`/quests/${q.id}`} />
+                <QuestCard
+                  quest={toCardData(q, { completedToday: doneToday.has(q.id) })}
+                  today={today}
+                  href={`/quests/${q.id}`}
+                  action={<QuestAction quest={q} doneToday={doneToday.has(q.id)} />}
+                />
               </li>
             ))}
           </ul>
@@ -117,7 +128,12 @@ async function QuestBoard({
               <ul className="mt-4 flex flex-col gap-5">
                 {done.map((q) => (
                   <li key={q.id}>
-                    <QuestCard quest={toCardData(q)} today={today} href={`/quests/${q.id}`} />
+                    <QuestCard
+                      quest={toCardData(q, { completedToday: doneToday.has(q.id) })}
+                      today={today}
+                      href={`/quests/${q.id}`}
+                      action={<QuestAction quest={q} doneToday={doneToday.has(q.id)} />}
+                    />
                   </li>
                 ))}
               </ul>

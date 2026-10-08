@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatMinutes, formatNumber, formatXpGain } from "./format";
+import { formatMinutes, formatNumber, formatXpGain, formatGameDate } from "./format";
 
 describe("format", () => {
   it("formats numbers with thousands separators", () => {
@@ -17,5 +17,12 @@ describe("format", () => {
     expect(formatMinutes(30)).toBe("30분");
     expect(formatMinutes(60)).toBe("1시간");
     expect(formatMinutes(95)).toBe("1시간 35분");
+  });
+});
+
+describe("formatGameDate", () => {
+  it("reads month and day without leading zeros", () => {
+    expect(formatGameDate("2026-10-08")).toBe("10월 8일");
+    expect(formatGameDate("2027-01-31")).toBe("1월 31일");
   });
 });

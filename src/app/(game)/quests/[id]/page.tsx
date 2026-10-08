@@ -7,6 +7,8 @@ import { STAT_META } from "@/components/game/quest-meta";
 import { PixelIcon } from "@/components/pixel/PixelIcon";
 import { Button } from "@/components/ui/Button";
 import { setQuestArchived, updateQuest } from "@/features/quests/actions";
+import { listCompletionsSince } from "@/features/progress/queries";
+import { QuestAction } from "@/features/quests/components/QuestAction";
 import { QuestForm } from "@/features/quests/components/QuestForm";
 import { getQuest, listQuestlineOptions } from "@/features/quests/queries";
 import type { CreatableType } from "@/features/quests/schemas";
@@ -27,7 +29,12 @@ async function QuestDetail({
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const player = await requireCharacter();
   const today = playerToday(player);
-  const [quest, questlines] = await Promise.all([getQuest(id, today), listQuestlineOptions()]);
+  const [quest, questlines, completions] = await Promise.all([
+    getQuest(id, today),
+    listQuestlineOptions(),
+    listCompletionsSince(today),
+  ]);
+  const doneToday = completions.some((c) => c.questId === quest.id);
   const archived = quest.status === "archived";
   const editable = quest.type !== "hidden";
 
@@ -38,7 +45,11 @@ async function QuestDetail({
           저장했어요.
         </p>
       )}
-      <QuestCard quest={toCardData(quest)} today={today} />
+      <QuestCard
+        quest={toCardData(quest, { completedToday: doneToday })}
+        today={today}
+        action={<QuestAction quest={quest} doneToday={doneToday} />}
+      />
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-small">
         <dt className="text-text-muted">성장 스탯</dt>

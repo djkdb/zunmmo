@@ -58,3 +58,38 @@ export async function startNewGame(
   await expect(page.locator("main header").filter({ visible: true })).toBeVisible();
   return email;
 }
+
+/**
+ * Next keeps previously visited routes mounted but hidden (React Activity) inside the same
+ * layout, so every lookup is narrowed to visible elements.
+ */
+export const visible = (page: Page) => ({
+  getByLabel: (text: string) => page.getByLabel(text, { exact: true }).filter({ visible: true }),
+  getByRole: (role: Parameters<Page["getByRole"]>[0], options?: Parameters<Page["getByRole"]>[1]) =>
+    page.getByRole(role, options).filter({ visible: true }),
+  getByText: (text: string) => page.getByText(text).filter({ visible: true }),
+});
+
+export async function addQuest(
+  page: Page,
+  {
+    title,
+    type,
+    extra,
+  }: { title: string; type: "MAIN" | "DAILY" | "SIDE" | "BOSS"; extra?: () => Promise<void> },
+) {
+  await page.goto("/quests/new");
+  const main = visible(page);
+  await main.getByLabel("퀘스트 이름").fill(title);
+  await main
+    .getByLabel(
+      { MAIN: "메인 퀘스트", DAILY: "데일리 퀘스트", SIDE: "사이드 퀘스트", BOSS: "보스 퀘스트" }[
+        type
+      ],
+    )
+    .check({ force: true });
+  await extra?.();
+  await main.getByRole("button", { name: "게시판에 올리기" }).click();
+  await expect(page).toHaveURL(/\/quests\?created=/);
+  await expect(visible(page).getByText("퀘스트를 게시판에 올렸어!")).toBeVisible();
+}

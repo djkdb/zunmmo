@@ -2,9 +2,11 @@
 
 import { redirect } from "next/navigation";
 
-import { playerToday, requireCharacter } from "@/features/player/queries";
-import { type Result, codeFromDbError, fail, fieldErrors } from "@/lib/errors";
-import { type Difficulty, questXp } from "@/lib/game";
+import { type PlayerWithCharacter, playerToday, requireCharacter } from "@/features/player/queries";
+import { getProgress, getUnlockedAchievements } from "@/features/progress/queries";
+import type { CompletionOutcome } from "@/features/progress/types";
+import { type Result, codeFromDbError, fail, fieldErrors, ok } from "@/lib/errors";
+import { type Difficulty, detectLevelUp, goalClearBonus, newlyUnlocked, questXp } from "@/lib/game";
 import { createClient } from "@/lib/supabase/server";
 
 import {
@@ -102,4 +104,98 @@ export async function setQuestArchived(questId: string, archived: boolean): Prom
   });
   if (error) throw new Error(codeFromDbError(error));
   redirect(archived ? "/quests?archived=1" : `/quests/${questId}`);
+}
+
+// ───────── completion (XP moves only through these RPCs) ─────────
+
+async function finishQuestline(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  goalId: string,
+): Promise<{ title: string; bonus: number; totalXpAfter: number } | null> {
+  const { data: goal, error } = await supabase
+    .from("goals")
+    .select("title, status, quests (type, status, xp)")
+    .eq("id", goalId)
+    .single();
+  if (error || goal.status !== "active") return null;
+  const steps = goal.quests.filter(
+    (q) => (q.type === "main" || q.type === "boss") && q.status !== "archived",
+  );
+  if (!steps.length || steps.some((q) => q.status !== "completed")) return null;
+
+  const bonus = goalClearBonus(steps.reduce((sum, q) => sum + q.xp, 0));
+  const { data, error: clearError } = await supabase.rpc("clear_goal", {
+    p_goal_id: goalId,
+    p_bonus: bonus,
+  });
+  if (clearError) return null;
+  return { title: goal.title, bonus, totalXpAfter: Number(data.total_xp_after) };
+}
+
+/** Badges reached by this completion (idempotent: the DB primary key ignores repeats). */
+async function unlockAchievements(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  player: PlayerWithCharacter,
+  totalXpAfter: number,
+): Promise<CompletionOutcome["achievements"]> {
+  const { data: character } = await supabase
+    .from("characters")
+    .select("character_stats (stat, xp)")
+    .single();
+  const statXp = { ...player.statXp };
+  for (const s of character?.character_stats ?? []) statXp[s.stat] = s.xp;
+  const [progress, unlocked] = await Promise.all([
+    getProgress({ profile: player.profile, statXp, totalXp: totalXpAfter }),
+    getUnlockedAchievements(),
+  ]);
+  const fresh = newlyUnlocked(progress.snapshot, new Set(unlocked.keys()));
+  if (!fresh.length) return [];
+  const { error } = await supabase.from("user_achievements").upsert(
+    fresh.map((a) => ({ achievement_id: a.id })),
+    { onConflict: "user_id,achievement_id", ignoreDuplicates: true },
+  );
+  if (error) return [];
+  return fresh.map((a) => ({ id: a.id, name: a.name, rarity: a.rarity, icon: a.icon }));
+}
+
+export async function completeQuest(questId: string): Promise<Result<CompletionOutcome>> {
+  const player = await requireCharacter();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("complete_quest", { p_quest_id: questId });
+  if (error) return fail(codeFromDbError(error));
+
+  const { data: quest } = await supabase
+    .from("quests")
+    .select("title, goal_id")
+    .eq("id", questId)
+    .single();
+  const before = Number(data.total_xp_before);
+  let after = Number(data.total_xp_after);
+
+  const goalClear = quest?.goal_id ? await finishQuestline(supabase, quest.goal_id) : null;
+  if (goalClear) after = goalClear.totalXpAfter;
+
+  const achievements = await unlockAchievements(supabase, player, after);
+
+  return ok({
+    questId,
+    questTitle: quest?.title ?? "",
+    character: { name: player.character.name, outfit: player.character.outfit },
+    xpChange: data.xp_change ?? 0,
+    totalXpBefore: before,
+    totalXpAfter: after,
+    levelUp: detectLevelUp(before, after),
+    goalClear: goalClear ? { title: goalClear.title, bonus: goalClear.bonus } : null,
+    achievements,
+  });
+}
+
+export async function uncompleteQuest(
+  questId: string,
+): Promise<Result<{ xpChange: number; totalXpAfter: number }>> {
+  await requireCharacter();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("uncomplete_quest", { p_quest_id: questId });
+  if (error) return fail(codeFromDbError(error));
+  return ok({ xpChange: data.xp_change ?? 0, totalXpAfter: Number(data.total_xp_after) });
 }

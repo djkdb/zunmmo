@@ -9,12 +9,14 @@ export function SectionHeader({
   tone,
   meta,
   href,
+  linkLabel = "모두 보기",
 }: {
   id: string;
   label: string;
   tone: "main" | "daily" | "side" | "boss" | "muted";
   meta?: string;
   href?: string;
+  linkLabel?: string;
 }) {
   const toneClass = {
     main: "text-quest-main-text",
@@ -35,7 +37,7 @@ export function SectionHeader({
             href={href}
             className="inline-flex min-h-11 items-center text-small text-primary-text hover:underline"
           >
-            모두 보기
+            {linkLabel}
           </Link>
         )}
       </div>
