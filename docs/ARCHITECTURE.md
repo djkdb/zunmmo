@@ -214,6 +214,7 @@ schedules (                              -- 고정 시간 일정 (로컬 날짜+
   id uuid pk, user_id uuid not null,
   title text not null, starts_at timestamptz not null, ends_at timestamptz (> starts_at),
   all_day boolean not null default false, location text,
+  repeat_weekdays smallint[] (ISO 1–7, null = 한 번), repeat_until date, skip_dates date[], -- 주간 반복 + 회차 건너뛰기
   quest_id uuid references quests on delete set null,   -- 본인 퀘스트만 (RLS)
   source text not null default 'manual',  -- (later) 'google'
   created_at
@@ -221,7 +222,7 @@ schedules (                              -- 고정 시간 일정 (로컬 날짜+
 
 adventures (                             -- Today's Adventure (하루 1행)
   id uuid pk, user_id uuid not null, game_date date not null,
-  quest_ids uuid[] not null (1–6개, 모두 본인 퀘스트 — owns_all_quests()),
+  quest_ids uuid[] not null (1–12개: 단발 6 + 습관, 모두 본인 퀘스트 — owns_all_quests()),
   briefing text, source text not null,   -- 'auto' | 'custom'
   started_at timestamptz not null default now(),
   unique (user_id, game_date)
@@ -255,6 +256,7 @@ user_achievements (
 
 ### 5.4 RPC 목록
 - `create_character(name, appearance)` — characters + 5개 character_stats 생성
+- `split_quest(quest_id, parts jsonb)` → 단계 id들 — 미완료 main/side를 2–6단계로. 첫 단계가 원래 행, 나머지는 같은 created_at·다음 sort_order (XP는 앱의 `splitPlan()`이 계산, 오류 `QUEST_NOT_SPLITTABLE`)
 - `set_quest_archived(quest_id, archived)` / `set_goal_archived(goal_id, archived)` — 보관/복원 (status는 클라이언트가 직접 못 씀)
 - `complete_quest(quest_id)` → `xp_result` — 게임 날짜는 DB가 계산 ([GAME_SYSTEM §2.1](./GAME_SYSTEM.md#21-완료-처리-db-함수-complete_quest)). 오류: `QUEST_NOT_FOUND` / `QUEST_NOT_ACTIVE` / `ALREADY_COMPLETED`
 - `uncomplete_quest(quest_id)` → `xp_result` — 오늘 게임 날짜의 완료만, `reversal` 기록. 오류: `UNDO_WINDOW_PASSED`
@@ -281,6 +283,7 @@ user_achievements (
 | RPC/RLS | Vitest + `pg` (`supabase/tests`) — 실제 `authenticated`/`anon` 역할 + JWT claims로 실행 | 이중 완료, 타인 데이터 접근 거부, 컬럼 권한, reversal. 로컬 DB가 없으면 skip |
 | UI | Playwright (`e2e/`) — 로그인 코드는 Mailpit API에서 읽음 | 가입→캐릭터 생성→퀘스트→완료→XP smoke, axe(WCAG 2.1 AA) 전 화면. `E2E_PROD=1`이면 `next start`로 실행 |
 | 페르소나 여정 | Playwright (`e2e/personas.spec.ts`, `e2e/world.ts`) | 5명의 하루를 실제 앱으로 플레이 — 심야·복귀·일정 과밀·키보드. `Etc/GMT±N`으로 로컬 시각 고정. 저널: `test-results/personas/` ([PERSONAS](./PERSONAS.md)) |
+| 4주 시뮬레이션 | Vitest (`scripts/sim`) + `pnpm sim` | 5명의 4주를 실제 `lib/game` 규칙으로 하루씩 (고정 시드). 불변식 + 밸런스 리포트 [SIMULATION](./SIMULATION.md) |
 | 시각 회귀 | Playwright `toHaveScreenshot` (`e2e/visual.spec.ts`, `VISUAL=1`) | `/styleguide` art·pixel·game 섹션, reduced-motion으로 스프라이트 첫 프레임 고정. 스냅샷은 `e2e/visual.spec.ts-snapshots/`에 커밋 |
 | 시각 | Playwright 스크린샷 (Phase 8) | 픽셀 컴포넌트 회귀 |
 

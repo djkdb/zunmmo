@@ -63,6 +63,13 @@ export function questXp(type: QuestType, difficulty: Difficulty): number {
 
 > 폼·템플릿 어디에도 XP 입력은 없다. 사용자는 `difficulty`만 고르고 XP는 항상 `questXp()`가 계산한다.
 
+### 1.3.1 퀘스트 나누기 (split)
+
+- 하루 예산보다 큰 main/side 퀘스트는 2–6단계로 나눌 수 있다 (`splitPlan`, DB `split_quest`). 보스·데일리는 나누지 않는다.
+- **XP는 원래 퀘스트를 나눠 갖는다**: 각 단계의 난이도 = 원래 이하에서 `단계 수 × questXp(d) ≤ 원래 XP × 1.2`를 만족하는 가장 큰 값. 쪼개기로 XP를 불릴 수 없다 (최대 +20%, 계획에 대한 작은 보상).
+- 예상 시간은 단계 수로 나눠 5분 단위로 반올림. 마감·스탯·퀘스트라인은 그대로.
+- 첫 단계가 원래 행을 이어받고(일정·오늘의 모험 연결 유지), 나머지는 같은 `created_at`·다음 `sort_order`로 바로 뒤에 들어간다.
+
 ### 1.4 상태 (Status)
 
 ```
@@ -191,17 +198,21 @@ export function goalClearBonus(questXpSum: number): number {
 
 ## 4. Level System
 
-### 4.1 MVP 곡선 — 선형
+### 4.1 곡선 — 램프 (Beta Hardening 2에서 선형 → 램프)
 
-| Level | 필요 누적 XP |
-|---|---|
-| 1 | 0 |
-| 2 | 1,000 |
-| 3 | 2,000 |
-| n | 1,000 × (n − 1) |
+| Level | 이 레벨까지 필요한 XP | 누적 XP |
+|---|---|---|
+| 2 | 300 | 300 |
+| 3 | 400 | 700 |
+| 4 | 500 | 1,200 |
+| 5 | 600 | 1,800 |
+| 9 | 1,000 | 5,200 |
+| 10 이후 | 레벨마다 1,000 | 6,200 + 1,000 × (n − 10) |
 
+- `LEVEL_CURVE = { kind: "ramp", first: 300, increment: 100, cap: 1000 }`. 4주 페르소나 시뮬레이션에서 선형 1,000으로는 **아무도 1주차에 레벨업하지 못해** 바꿨다 ([SIMULATION](./SIMULATION.md)).
+- 모든 단계가 1,000 이하라 선형에서 바꿔도 **파생 레벨은 오르기만 한다** (테스트로 고정). 레벨은 저장하지 않으므로 마이그레이션이 없다.
 - 최대 레벨: 99 (그 이후는 "Lv.99 ★n" 프레스티지 표시 — post-MVP)
-- UI 표시는 **레벨 내 진행도**: `Lv.24 · 420 / 1,000 XP` (누적 23,420)
+- UI 표시는 **레벨 내 진행도**: `Lv.12 · 420 / 1,000 XP`
 
 ### 4.2 교체 가능한 곡선 정의
 
@@ -209,9 +220,10 @@ export function goalClearBonus(questXpSum: number): number {
 // src/lib/game/level.ts (사양)
 export type LevelCurve =
   | { kind: 'linear'; step: number }
-  | { kind: 'polynomial'; base: number; exponent: number }; // xpToReach(n) = base * (n-1)^exponent
+  | { kind: 'polynomial'; base: number; exponent: number } // xpToReach(n) = base * (n-1)^exponent
+  | { kind: 'ramp'; first: number; increment: number; cap: number }; // 단계 = min(cap, first + increment·k)
 
-export const LEVEL_CURVE: LevelCurve = { kind: 'linear', step: 1000 };
+export const LEVEL_CURVE: LevelCurve = { kind: 'ramp', first: 300, increment: 100, cap: 1000 };
 export const MAX_LEVEL = 99;
 
 export function xpToReachLevel(level: number, curve = LEVEL_CURVE): number;
@@ -222,15 +234,15 @@ export function levelProgress(totalXp: number, curve = LEVEL_CURVE): {
 export function detectLevelUp(before: number, after: number): { from: number; to: number } | null;
 ```
 
-### 4.3 페이싱 검증 (선형 1,000 기준)
+### 4.3 페이싱 검증 (램프 기준)
 
-| 사용 패턴 | 일일 XP | 레벨업 주기 | 3개월 후 |
+| 사용 패턴 | 일일 XP | 1주차 레벨업 | 3개월 후 |
 |---|---|---|---|
-| 라이트 (daily ⭐2 ×3) | ~120 | ~8일 | Lv.11 |
-| 보통 (daily ×4 + 단발 ⭐3 ×1) | ~250 | ~4일 | Lv.23 |
-| 하드 (+ 주 1회 Boss) | ~350 | ~3일 | Lv.32 |
+| 라이트 (daily ⭐2 ×3) | ~120 | 2회 (Lv.3) | Lv.14 |
+| 보통 (daily ×4 + 단발 ⭐3 ×1) | ~250 | 3회 (Lv.4) | Lv.26 |
+| 하드 (+ 주 1회 Boss) | ~350 | 4회 (Lv.5) | Lv.35 |
 
-→ 첫 주에 1–2회 레벨업을 경험하는 것이 목표. Beta 데이터로 재조정한다.
+→ 목표: 첫 주에 1–2회 이상 레벨업. 실제 패턴은 `pnpm sim`의 4주 페르소나 리포트([SIMULATION](./SIMULATION.md))로 확인한다 — 규칙을 바꾸면 리포트를 다시 생성한다.
 
 ### 4.4 칭호 (Title)
 
@@ -340,13 +352,15 @@ weights = { urgency: 3, boss: 1.5, dueToday: 2, main: 1.2, balance: 0.5, load: 1
 - `statNeglect`: `1 − (지난 7일 해당 스탯 XP / 가장 많이 자란 스탯 XP)`. 지난 7일 성장이 없으면 0.
 - 예상 시간이 비어 있으면 난이도 기본값 `DEFAULT_MINUTES` = ⭐1 15분 · ⭐2 30분 · ⭐3 60분 · ⭐4 90분 · ⭐5 120분.
 - **용량** = `daily_capacity_min`(기본 240) − 오늘 고정 일정 시간 (끝 시간이 없는 일정은 60분, 하루 종일 일정은 0분).
-- **페이스** (`adventurePace`): 로컬 00:00–04:59 = `night`, 마지막 완료가 3일 이상 전 = `comeback`, 그 외 `normal`. night/comeback은 **가벼운 날**: 예산 = min(용량, 60분), 최대 2개 (`LIGHT_PACE`). GM 브리핑 문장과 같은 입력에서 계산해 말과 계획이 어긋나지 않는다.
+- **페이스** (`adventurePace`): **하루 시작 시각 전 4시간**(기본 04:00 → 00:00–03:59) = `night` (`isLateNight`) — 하루 시작을 07:00으로 옮긴 새벽형에겐 01:00이 하루의 한가운데다, 마지막 완료가 3일 이상 전 = `comeback`, 그 외 `normal`. night/comeback은 **가벼운 날**: 예산 = min(용량, 60분), 최대 2개 (`LIGHT_PACE`). GM 브리핑 문장과 같은 입력에서 계산해 말과 계획이 어긋나지 않는다.
 - **선택**: 점수 내림차순(동점이면 마감 빠른 순 → **만든 순서** → `sort_order` → id)으로 담는다. 루틴은 위에서 아래로 만든 순서대로 읽힌다.
-  D-0/D-1 보스는 용량을 넘어도 항상 포함. 나머지는 `max(예산 − 강제 보스 시간, GAP_MINUTES=30)` 안에서 — 일정·보스로 하루가 꽉 차도 15분짜리 퀘스트는 틈새에 들어간다. 최대 6개(가벼운 날 2개), 후보가 있으면 최소 1개.
+  D-0/D-1 보스는 용량을 넘어도 항상 포함. 나머지는 `max(예산 − 강제 보스 시간, GAP_MINUTES=30)` 안에서 — 일정·보스로 하루가 꽉 차도 15분짜리 퀘스트는 틈새에 들어간다.
+  **단발 퀘스트는 최대 6개(`MAX_PICKS`), 오늘이 회차인 습관(daily)은 그 위에 예산 안에서 더해진다** — 계획 전체 최대 12개(`MAX_PLAN_SIZE`, DB 제약). 루틴 8개인 플레이어가 매일 같은 두 개(약 먹기!)를 잃던 문제를 시뮬레이션이 찾았다. 가벼운 날은 전체 2개. 후보가 있으면 최소 1개.
 - **tooBig**: questline/prep/deadline 이유로 중요한데 예산보다 길어서 못 들어간 첫 퀘스트. 패널이 "작게 나누면 추천에 넣을 수 있어요"라고 알려 준다 (긴 영화 같은 사이드는 해당 없음).
 - 각 추천에는 가장 크게 기여한 항목이 `reason`(boss/prep/deadline/daily/questline/balance/open)으로 붙는다 — GM 브리핑의 재료.
 - 시작하면 `adventures(user_id, game_date)`에 고정된다. "다시 추천받기"는 같은 날 행을 덮어쓴다 (XP와 무관).
-- **계획은 플레이어 것**: 시작한 뒤 아직 안 한 퀘스트를 빼거나(마지막 하나는 제외), 오늘의 후보 중에서 더 담을 수 있다 (최대 6개). 편집하면 `source = 'custom'`.
+- **계획은 플레이어 것**: 시작한 뒤 아직 안 한 퀘스트를 빼거나(마지막 하나는 제외), 오늘의 후보 중에서 더 담을 수 있다 (최대 12개).
+- **반복 일정**: 주간 반복 일정(수업·정기 미팅)은 회차마다 그날 용량에서 빠진다 (건너뛴 회차 제외). 편집하면 `source = 'custom'`.
 
 ## 9. 데이터 엔티티 요약
 

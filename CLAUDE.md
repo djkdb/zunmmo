@@ -17,7 +17,7 @@
 | 스택, 디렉터리, DB 스키마, RLS, 테스트 | `docs/ARCHITECTURE.md` |
 | Phase 계획 | `docs/ROADMAP.md` |
 | 배포·런치 체크리스트·베타 운영 | `docs/DEPLOY.md` |
-| 페르소나·시뮬레이션 결과 | `docs/PERSONAS.md` |
+| 페르소나·시뮬레이션 결과 | `docs/PERSONAS.md`, `docs/SIMULATION.md` (생성) |
 | 아트 방향 | `design/ART_DIRECTION.md` |
 | 픽셀 제작·렌더링 규칙 | `design/PIXEL_RULES.md` |
 | 색 토큰 | `design/COLOR_PALETTE.md` |
@@ -41,6 +41,7 @@ pnpm build          # next build
 pnpm format         # prettier (CI는 pnpm format:check)
 pnpm art:build      # /art 원본 → PNG 시트 + 타입 매니페스트 + 파비콘 (생성 파일은 손으로 고치지 않음)
 pnpm art:check      # 배포 PNG의 LIFE-32 팔레트/알파 검사
+pnpm sim            # 4주 페르소나 규칙 시뮬레이션 리포트 (규칙 변경 후 --write로 docs/SIMULATION.md 갱신)
 VISUAL=1 pnpm test:e2e visual   # 픽셀 시스템 시각 회귀 (아트 변경 후 --update-snapshots)
 pnpm db:start       # 로컬 Supabase (Docker) — Postgres :54322, API :54321, Mailpit :54324
 pnpm db:reset       # 마이그레이션 재적용
