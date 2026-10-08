@@ -135,6 +135,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      quest_completions: {
+        Row: {
+          completed_at: string;
+          id: string;
+          occurrence_date: string;
+          quest_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          completed_at?: string;
+          id?: string;
+          occurrence_date: string;
+          quest_id: string;
+          user_id: string;
+        };
+        Update: {
+          completed_at?: string;
+          id?: string;
+          occurrence_date?: string;
+          quest_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "quest_completions_quest_id_fkey";
+            columns: ["quest_id"];
+            isOneToOne: false;
+            referencedRelation: "quests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       quests: {
         Row: {
           completed_at: string | null;
@@ -210,11 +243,122 @@ export type Database = {
           },
         ];
       };
+      user_achievements: {
+        Row: {
+          achievement_id: string;
+          unlocked_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          achievement_id: string;
+          unlocked_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          achievement_id?: string;
+          unlocked_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      xp_logs: {
+        Row: {
+          amount: number;
+          character_id: string;
+          completion_id: string | null;
+          created_at: string;
+          goal_id: string | null;
+          id: string;
+          meta: NonNullable<Json>;
+          quest_id: string | null;
+          reason: Database["public"]["Enums"]["xp_reason"];
+          stat: Database["public"]["Enums"]["stat_type"] | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount: number;
+          character_id: string;
+          completion_id?: string | null;
+          created_at?: string;
+          goal_id?: string | null;
+          id?: string;
+          meta?: NonNullable<Json>;
+          quest_id?: string | null;
+          reason: Database["public"]["Enums"]["xp_reason"];
+          stat?: Database["public"]["Enums"]["stat_type"] | null;
+          user_id: string;
+        };
+        Update: {
+          amount?: number;
+          character_id?: string;
+          completion_id?: string | null;
+          created_at?: string;
+          goal_id?: string | null;
+          id?: string;
+          meta?: NonNullable<Json>;
+          quest_id?: string | null;
+          reason?: Database["public"]["Enums"]["xp_reason"];
+          stat?: Database["public"]["Enums"]["stat_type"] | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "xp_logs_character_id_fkey";
+            columns: ["character_id"];
+            isOneToOne: false;
+            referencedRelation: "characters";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "xp_logs_completion_id_fkey";
+            columns: ["completion_id"];
+            isOneToOne: false;
+            referencedRelation: "quest_completions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "xp_logs_goal_id_fkey";
+            columns: ["goal_id"];
+            isOneToOne: false;
+            referencedRelation: "goals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "xp_logs_quest_id_fkey";
+            columns: ["quest_id"];
+            isOneToOne: false;
+            referencedRelation: "quests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      clear_goal: {
+        Args: { p_bonus: number; p_goal_id: string };
+        Returns: Database["public"]["CompositeTypes"]["xp_result"];
+        SetofOptions: {
+          from: "*";
+          to: "xp_result";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      complete_quest: {
+        Args: { p_quest_id: string };
+        Returns: Database["public"]["CompositeTypes"]["xp_result"];
+        SetofOptions: {
+          from: "*";
+          to: "xp_result";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       create_character: {
         Args: { p_appearance: Json; p_name: string };
         Returns: {
@@ -233,6 +377,12 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      game_date_at: {
+        Args: { p_at: string; p_day_start_hour: number; p_timezone: string };
+        Returns: string;
+      };
+      player_game_date: { Args: { p_user: string }; Returns: string };
+      player_progress: { Args: Record<PropertyKey, never>; Returns: Json };
       set_goal_archived: {
         Args: { p_archived: boolean; p_goal_id: string };
         Returns: {
@@ -283,6 +433,16 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      uncomplete_quest: {
+        Args: { p_quest_id: string };
+        Returns: Database["public"]["CompositeTypes"]["xp_result"];
+        SetofOptions: {
+          from: "*";
+          to: "xp_result";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
     };
     Enums: {
       goal_status: "active" | "cleared" | "archived";
@@ -290,9 +450,25 @@ export type Database = {
       quest_status: "active" | "completed" | "expired" | "archived";
       quest_type: "main" | "daily" | "side" | "boss" | "hidden";
       stat_type: "int" | "foc" | "vit" | "soc" | "cre";
+      xp_reason:
+        | "quest_complete"
+        | "goal_clear"
+        | "achievement"
+        | "streak_bonus"
+        | "reversal"
+        | "admin_adjust";
     };
     CompositeTypes: {
-      [_ in never]: never;
+      xp_result: {
+        quest_id: string | null;
+        completion_id: string | null;
+        occurrence_date: string | null;
+        xp_change: number | null;
+        total_xp_before: number | null;
+        total_xp_after: number | null;
+        stat: Database["public"]["Enums"]["stat_type"] | null;
+        stat_xp_after: number | null;
+      };
     };
   };
 };
@@ -406,6 +582,14 @@ export const Constants = {
       quest_status: ["active", "completed", "expired", "archived"],
       quest_type: ["main", "daily", "side", "boss", "hidden"],
       stat_type: ["int", "foc", "vit", "soc", "cre"],
+      xp_reason: [
+        "quest_complete",
+        "goal_clear",
+        "achievement",
+        "streak_bonus",
+        "reversal",
+        "admin_adjust",
+      ],
     },
   },
 } as const;
