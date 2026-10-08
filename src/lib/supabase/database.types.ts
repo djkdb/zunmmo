@@ -3,6 +3,37 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      adventures: {
+        Row: {
+          briefing: string | null;
+          game_date: string;
+          id: string;
+          quest_ids: string[];
+          source: string;
+          started_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          briefing?: string | null;
+          game_date: string;
+          id?: string;
+          quest_ids: string[];
+          source?: string;
+          started_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          briefing?: string | null;
+          game_date?: string;
+          id?: string;
+          quest_ids?: string[];
+          source?: string;
+          started_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       character_stats: {
         Row: {
           character_id: string;
@@ -243,6 +274,54 @@ export type Database = {
           },
         ];
       };
+      schedules: {
+        Row: {
+          all_day: boolean;
+          created_at: string;
+          ends_at: string | null;
+          id: string;
+          location: string | null;
+          quest_id: string | null;
+          source: string;
+          starts_at: string;
+          title: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          all_day?: boolean;
+          created_at?: string;
+          ends_at?: string | null;
+          id?: string;
+          location?: string | null;
+          quest_id?: string | null;
+          source?: string;
+          starts_at: string;
+          title: string;
+          user_id?: string;
+        };
+        Update: {
+          all_day?: boolean;
+          created_at?: string;
+          ends_at?: string | null;
+          id?: string;
+          location?: string | null;
+          quest_id?: string | null;
+          source?: string;
+          starts_at?: string;
+          title?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "schedules_quest_id_fkey";
+            columns: ["quest_id"];
+            isOneToOne: false;
+            referencedRelation: "quests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_achievements: {
         Row: {
           achievement_id: string;
@@ -381,6 +460,7 @@ export type Database = {
         Args: { p_at: string; p_day_start_hour: number; p_timezone: string };
         Returns: string;
       };
+      owns_all_quests: { Args: { p_ids: string[] }; Returns: boolean };
       player_game_date: { Args: { p_user: string }; Returns: string };
       player_progress: { Args: Record<PropertyKey, never>; Returns: Json };
       set_goal_archived: {
