@@ -12,7 +12,6 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "format:check": "prettier --check .",
     "art:build": "tsx scripts/art/build.ts",
     "art:check": "tsx scripts/art/check.ts",
     "sim": "tsx scripts/sim/report.ts",
