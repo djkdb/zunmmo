@@ -144,3 +144,11 @@ export async function statXpSince(from: GameDate): Promise<Record<Stat, number>>
   }
   return totals;
 }
+
+/** Every game date with at least one completion (ascending) — streaks and comebacks. */
+export async function listPlayDates(): Promise<GameDate[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("player_progress");
+  if (error) throw error;
+  return (data as unknown as ProgressRow).playDates;
+}

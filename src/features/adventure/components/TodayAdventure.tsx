@@ -20,7 +20,13 @@ export interface AdventureStep {
 }
 
 type TodayAdventureProps =
-  | { state: "ready"; titles: string[]; totalXp: number; totalMinutes: number }
+  | {
+      state: "ready";
+      briefing: string;
+      titles: string[];
+      totalXp: number;
+      totalMinutes: number;
+    }
   | { state: "active"; steps: AdventureStep[]; briefing: string | null; today: GameDate }
   | {
       state: "done";
@@ -64,17 +70,32 @@ export function TodayAdventure(props: TodayAdventureProps) {
   );
 }
 
+function GmLine({ children }: { children: string }) {
+  return (
+    <p className="flex items-start gap-2 text-body text-on-parchment">
+      <PixelIcon name="ui-gm" className="mt-0.5 shrink-0" />
+      <span>
+        <span className="sr-only">게임 마스터: </span>
+        {children}
+      </span>
+    </p>
+  );
+}
+
 function Ready({
+  briefing,
   titles,
   totalXp,
   totalMinutes,
 }: {
+  briefing: string;
   titles: string[];
   totalXp: number;
   totalMinutes: number;
 }) {
   return (
     <>
+      <GmLine>{briefing}</GmLine>
       <div className="flex flex-col gap-1">
         <p className="text-title">오늘의 모험이 기다리고 있어</p>
         <p className="text-small text-on-parchment-muted">
@@ -121,7 +142,7 @@ function Active({
   const remainingXp = steps.filter((s) => !s.done).reduce((sum, s) => sum + s.quest.xp, 0);
   return (
     <>
-      {briefing && <p className="text-small text-on-parchment">{briefing}</p>}
+      {briefing && <GmLine>{briefing}</GmLine>}
       <ol className="flex flex-col">
         {steps.map(({ quest, done: isDone }, i) => (
           <li

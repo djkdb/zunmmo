@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { BossBanner } from "@/components/game/BossBanner";
 import { CharacterHeader } from "@/components/game/CharacterHeader";
+import type { CharacterState } from "@/components/game/character/CharacterSprite";
 import { EmptyState } from "@/components/game/EmptyState";
 import { QuestCard } from "@/components/game/QuestCard";
 import { QuestRow } from "@/components/game/QuestRow";
@@ -14,14 +15,27 @@ import { selectBoard } from "@/features/adventure/board";
 import { AdventureSkeleton } from "@/features/adventure/components/AdventureSkeleton";
 import { type AdventureStep, TodayAdventure } from "@/features/adventure/components/TodayAdventure";
 import { getAdventure } from "@/features/adventure/queries";
-import { completionWindowStart, recommendationFor } from "@/features/adventure/recommendation";
+import {
+  briefingFor,
+  completionWindowStart,
+  recommendationFor,
+} from "@/features/adventure/recommendation";
 import { SectionHeader } from "@/features/adventure/components/SectionHeader";
 import { type PlayerWithCharacter, playerToday, requireCharacter } from "@/features/player/queries";
 import type { GameDate } from "@/lib/game";
 import { RecentXpList } from "@/features/progress/components/RecentXpList";
-import { listCompletionsSince, listRecentXp } from "@/features/progress/queries";
+import {
+  type CompletionLog,
+  listCompletionsSince,
+  listRecentXp,
+} from "@/features/progress/queries";
 import { QuestAction } from "@/features/quests/components/QuestAction";
-import { listQuestlines, listQuests } from "@/features/quests/queries";
+import {
+  type QuestView,
+  type QuestlineView,
+  listQuestlines,
+  listQuests,
+} from "@/features/quests/queries";
 import { toCardData } from "@/features/quests/view";
 
 export const metadata: Metadata = { title: "모험" };
@@ -38,7 +52,7 @@ async function Adventure() {
     listRecentXp(3),
   ]);
   const board = selectBoard(quests, questlines, today, completions);
-  const todayAdventure = await todayPanel(player, today, { quests, questlines, completions });
+  const { panel, mood } = await todayPanel(player, today, { quests, questlines, completions });
   const { character } = player;
 
   return (
@@ -47,10 +61,11 @@ async function Adventure() {
         name={character.name}
         outfit={character.outfit}
         totalXp={character.totalXp}
+        state={board.isEmpty ? "idle" : mood}
         action={<SettingsLink />}
       />
 
-      {!board.isEmpty && <TodayAdventure {...todayAdventure} />}
+      {!board.isEmpty && <TodayAdventure {...panel} />}
 
       {board.isEmpty ? (
         <PixelFrame variant="parchment">
@@ -189,12 +204,15 @@ async function Adventure() {
   );
 }
 
-/** Pick the Today's Adventure state: fixed picks once started, otherwise a fresh recommendation. */
+/**
+ * Pick the Today's Adventure state (fixed picks once started, otherwise a fresh
+ * recommendation with the GM's line) and how the character should look about it.
+ */
 async function todayPanel(
   player: PlayerWithCharacter,
   today: GameDate,
-  loaded: Parameters<typeof recommendationFor>[2] & {},
-): Promise<Parameters<typeof TodayAdventure>[0]> {
+  loaded: { quests: QuestView[]; questlines: QuestlineView[]; completions: CompletionLog[] },
+): Promise<{ panel: Parameters<typeof TodayAdventure>[0]; mood: CharacterState }> {
   const adventure = await getAdventure(today);
   const doneToday = new Set(
     loaded.completions.filter((c) => c.occurrenceDate === today).map((c) => c.questId),
@@ -207,23 +225,34 @@ async function todayPanel(
   });
 
   if (steps.length && steps.some((s) => !s.done)) {
-    return { state: "active", steps, briefing: adventure?.briefing ?? null, today };
+    return {
+      panel: { state: "active", steps, briefing: adventure?.briefing ?? null, today },
+      mood: "walking",
+    };
   }
   const recommendation = await recommendationFor(player, today, loaded);
   if (steps.length) {
     return {
-      state: "done",
-      steps,
-      character: { name: player.character.name, outfit: player.character.outfit },
-      canContinue: recommendation.picks.length > 0,
+      panel: {
+        state: "done",
+        steps,
+        character: { name: player.character.name, outfit: player.character.outfit },
+        canContinue: recommendation.picks.length > 0,
+      },
+      mood: "celebrating",
     };
   }
-  if (!recommendation.picks.length) return { state: "rest" };
+  const gm = await briefingFor(player, today, loaded, recommendation);
+  if (!recommendation.picks.length) return { panel: { state: "rest" }, mood: gm.mood };
   return {
-    state: "ready",
-    titles: recommendation.picks.map((p) => byId.get(p.questId)?.title ?? ""),
-    totalXp: recommendation.totalXp,
-    totalMinutes: recommendation.totalMinutes,
+    panel: {
+      state: "ready",
+      briefing: gm.line,
+      titles: recommendation.picks.map((p) => byId.get(p.questId)?.title ?? ""),
+      totalXp: recommendation.totalXp,
+      totalMinutes: recommendation.totalMinutes,
+    },
+    mood: gm.mood,
   };
 }
 

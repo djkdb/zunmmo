@@ -20,6 +20,7 @@ const quest = (overrides: Partial<QuestView>): QuestView => ({
   goal: null,
   completedAt: null,
   createdAt: "2026-10-01T00:00:00Z",
+  sortOrder: 0,
   ...overrides,
 });
 
