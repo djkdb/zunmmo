@@ -210,30 +210,26 @@ quest_completions (
 
 xp_logs (… GAME_SYSTEM §2.4 …)
 
-schedules (                              -- 고정 시간 일정
+schedules (                              -- 고정 시간 일정 (로컬 날짜+시각 입력 → timestamptz 저장)
   id uuid pk, user_id uuid not null,
-  title text not null, starts_at timestamptz not null, ends_at timestamptz,
+  title text not null, starts_at timestamptz not null, ends_at timestamptz (> starts_at),
   all_day boolean not null default false, location text,
-  quest_id uuid references quests on delete set null,
-  source text not null default 'manual',  -- 'manual' | (later) 'google'
+  quest_id uuid references quests on delete set null,   -- 본인 퀘스트만 (RLS)
+  source text not null default 'manual',  -- (later) 'google'
   created_at
 )
 
-adventures (                             -- Today's Adventure
+adventures (                             -- Today's Adventure (하루 1행)
   id uuid pk, user_id uuid not null, game_date date not null,
-  quest_ids uuid[] not null, briefing text, source text not null, -- 'auto' | 'custom'
+  quest_ids uuid[] not null (1–6개, 모두 본인 퀘스트 — owns_all_quests()),
+  briefing text, source text not null,   -- 'auto' | 'custom'
   started_at timestamptz not null default now(),
   unique (user_id, game_date)
 )
 
-achievements (                           -- seed, 읽기 전용
-  id text pk, name text, description text, icon_key text,
-  rarity text check (rarity in ('common','rare','epic','legendary')),
-  criteria jsonb not null, xp_reward int not null default 0, sort int
-)
-
+-- 업적 정의는 코드 상수(ACHIEVEMENTS). DB에는 획득 기록만.
 user_achievements (
-  user_id uuid, achievement_id text references achievements,
+  user_id uuid, achievement_id text check (achievement_id ~ '^[a-z0-9_]{1,40}$'),
   unlocked_at timestamptz not null default now(),
   primary key (user_id, achievement_id)
 )
@@ -269,6 +265,8 @@ user_achievements (
 업적 지급은 RPC가 아니다: 배지에 XP가 없으므로 `user_achievements`에 본인 행 INSERT만 허용한다 (GAME_SYSTEM §7).
 
 ## 6. 에러/로딩/빈 상태 규약
+
+- 폼 Server Action은 실패 시 `withValues(fail(...), formData)`로 제출값을 돌려주고, 폼은 이를 `defaultValue`로 쓴다. React 19는 액션이 끝나면 비제어 필드를 리셋하기 때문 (`FormState`, `src/lib/errors`).
 
 - Server Action은 `Result<T, AppError>` 형태로 반환 (`{ ok: true, data } | { ok: false, error: { code, message } }`). throw는 예상치 못한 오류만.
 - `AppError.code`는 enum (`QUEST_NOT_FOUND`, `ALREADY_COMPLETED`, `UNAUTHENTICATED`, `VALIDATION_FAILED` …) → UI 문구 매핑은 `src/lib/errors/messages.ko.ts` 한 곳.

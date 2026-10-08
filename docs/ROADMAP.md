@@ -87,12 +87,15 @@
 
 **Exit** (통과): 원장 합계 == `total_xp` DB 테스트 / E2E — 완료·업적·되돌리기, 레벨업 장면 / axe 0 (캐릭터 화면 포함)
 
-## Phase 6 — Calendar
-- `schedules`, `adventures` 마이그레이션
-- 주간(기본, 모바일)/월간 뷰, 퀘스트 마감·일정·daily 회차 표시
-- Today's Adventure (결정적 `recommendToday`) + **START TODAY'S ADVENTURE** CTA 실동작
+## Phase 6 — Calendar + Today's Adventure ✅
+- [x] `schedules`, `adventures` 마이그레이션 (RLS: 연결/선택한 퀘스트도 본인 것만)
+- [x] `recommendToday` (결정적, 용량·일정 반영, D-0/1 보스 고정) + 단위 테스트
+- [x] 대시보드 TODAY'S ADVENTURE: 미시작(Accent CTA) → 진행 중(번호 체크리스트, 남은 보상) → 완료(축하) / 다시 추천받기
+- [x] `/calendar` 주간 스트립·월간 그리드 + 선택일 아젠다 (하루 종일 / 시간 일정 / 완료), 미니 픽셀 마커 + 범례 + 스크린리더 요약
+- [x] `/calendar/new` 일정 추가 (로컬 시각 → timestamptz, DST 안전), 삭제
+- [x] 폼 오류 시 입력 유지 (React 19 폼 리셋 대응 — `withValues`)
 
-**Exit**: Today's Adventure 전체 플로우 동작 (외부 API 없이)
+**Exit** (통과): E2E — 오늘의 모험 시작→완료, 일정 추가(검증 오류 후 재제출)·마감 표시·월간 뷰·삭제 / DB 테스트 28 / axe 0 (캘린더 포함)
 
 ## Phase 7 — Game Master (규칙 기반)
 > 2026-10-08 결정: Claude API(LLM) 연동 제외. GM은 결정적 규칙 + 템플릿 ([GAME_MASTER](./GAME_MASTER.md)).

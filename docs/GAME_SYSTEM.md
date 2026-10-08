@@ -329,8 +329,18 @@ score(q) =
 weights = { urgency: 3, boss: 1.5, dueToday: 2, main: 1.2, balance: 0.5, load: 1 }
 ```
 
-- 기본 추천 개수: 3–6개, `estimated_minutes` 합 ≤ `dailyCapacity`(기본 240분, 설정 가능).
-- 오늘 고정 일정(`schedules`)이 있으면 그 시간만큼 capacity 차감.
+구현: `recommendToday()` (`src/lib/game/recommend.ts`). 세부 규칙:
+
+- **후보**: active/expired 단발 퀘스트 + 오늘이 회차이고 아직 안 한 daily (`weekly_count`는 이번 주 횟수를 채우면 제외).
+- `urgency`: D-0·D-1 = 1.0, 이후 `1/daysLeft`, 마감 없음 = 0, **기한 만료 = 0.3** ("다시 도전" — 후보에는 남되 맨 위로 오지 않음).
+- `goalMomentum`: Questline마다 **다음 단계**(가장 먼저 만든 미완료 main)에만 `0.5 + 0.5 × 진행률`. 나머지 단계는 0.
+- `statNeglect`: `1 − (지난 7일 해당 스탯 XP / 가장 많이 자란 스탯 XP)`. 지난 7일 성장이 없으면 0.
+- 예상 시간이 비어 있으면 난이도 기본값 `DEFAULT_MINUTES` = ⭐1 15분 · ⭐2 30분 · ⭐3 60분 · ⭐4 90분 · ⭐5 120분.
+- **용량** = `daily_capacity_min`(기본 240) − 오늘 고정 일정 시간 (끝 시간이 없는 일정은 60분, 하루 종일 일정은 0분).
+- **선택**: 점수 내림차순(동점이면 마감 빠른 순 → XP 큰 순 → id)으로 용량 안에서 담는다. 최대 6개.
+  D-0/D-1 보스는 용량을 넘어도 항상 포함. 후보가 있으면 최소 1개.
+- 각 추천에는 가장 크게 기여한 항목이 `reason`(boss/deadline/daily/questline/balance/open)으로 붙는다 — GM 브리핑(Phase 7)의 재료.
+- 시작하면 `adventures(user_id, game_date)`에 고정된다. "다시 추천받기"는 같은 날 행을 덮어쓴다 (XP와 무관).
 
 ## 9. 데이터 엔티티 요약
 
