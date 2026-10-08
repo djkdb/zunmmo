@@ -1,4 +1,4 @@
-import { COMEBACK_GAP_DAYS, LATE_NIGHT_END_HOUR } from "./recommend";
+import { COMEBACK_GAP_DAYS, isLateNight } from "./recommend";
 import { type GameDate, daysBetween } from "./time";
 
 /** Character states the GM can ask for (CHARACTER_GUIDE §5; the UI resolves undrawn ones). */
@@ -15,6 +15,8 @@ export interface BriefingInput {
   today: GameDate;
   /** Local hour 0–23 right now (for the late-night rest line). */
   localHour: number;
+  /** profiles.day_start_hour (default 4) — late night is relative to it. */
+  dayStartHour?: number;
   completedToday: number;
   /** Nearest open boss and its deadline. */
   boss: { title: string; deadline: GameDate } | null;
@@ -94,7 +96,7 @@ export function briefingSituation(input: BriefingInput): {
   situation: BriefingSituation;
   fill: Fill;
 } {
-  if (input.localHour < LATE_NIGHT_END_HOUR && input.completedToday === 0) {
+  if (isLateNight(input.localHour, input.dayStartHour ?? 4) && input.completedToday === 0) {
     return { situation: "late_night", fill: {} };
   }
   if (input.boss) {

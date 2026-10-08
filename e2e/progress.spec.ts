@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { addQuest, startNewGame, visible } from "./helpers";
+import { xpToReachLevel } from "../src/lib/game";
 import { setTotalXp } from "./seed";
 
 test("complete a quest, earn XP and a badge, then undo", async ({ page }) => {
@@ -36,7 +37,8 @@ test("crossing a level boundary opens the level-up scene", async ({ page }) => {
       await visible(page).getByRole("radio", { name: "매일" }).click();
     },
   });
-  await setTotalXp(email, 990);
+  // Just below Lv.2 on the current curve; the daily's 40 XP crosses it.
+  await setTotalXp(email, xpToReachLevel(2) - 10);
 
   await page.goto("/adventure");
   await visible(page).getByRole("button", { name: "퀘스트 완료: 운동 30분" }).click();

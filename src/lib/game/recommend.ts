@@ -17,7 +17,10 @@ export const RECOMMEND_WEIGHTS = {
   load: 1,
 } as const;
 
+/** One-off quests in a plan; the day's habits come on top (GAME_SYSTEM §8). */
 export const MAX_PICKS = 6;
+/** Everything a stored plan can hold (adventures.quest_ids). */
+export const MAX_PLAN_SIZE = 12;
 
 /**
  * Pace of the day (GAME_MASTER §3). Late at night and on the first day back the GM plans a
@@ -25,8 +28,19 @@ export const MAX_PICKS = 6;
  */
 export type AdventurePace = "normal" | "night" | "comeback";
 export const LIGHT_PACE = { budgetMinutes: 60, maxPicks: 2 } as const;
-/** Local hours before this count as late night (00:00–04:59). */
-export const LATE_NIGHT_END_HOUR = 5;
+/**
+ * Late night is the last few hours before the player's own day start (default 04:00 →
+ * 00:00–03:59). A night owl who moves the day start to 07:00 plays at 01:00 in the middle of
+ * their day, not at its end.
+ */
+export const NIGHT_WINDOW_HOURS = 4;
+/** Nights played in the last week that make the GM suggest a later day start. */
+export const NIGHT_OWL_NIGHTS = 3;
+
+export function isLateNight(localHour: number, dayStartHour: number): boolean {
+  const hoursLeft = (dayStartHour - localHour + 24) % 24;
+  return hoursLeft > 0 && hoursLeft <= NIGHT_WINDOW_HOURS;
+}
 /** Days since the last completion that make today a comeback. */
 export const COMEBACK_GAP_DAYS = 3;
 /**
@@ -110,9 +124,11 @@ export interface Recommendation {
 export function adventurePace(input: {
   today: GameDate;
   localHour: number;
+  /** profiles.day_start_hour (default 4). */
+  dayStartHour?: number;
   lastPlayedDate: GameDate | null;
 }): AdventurePace {
-  if (input.localHour < LATE_NIGHT_END_HOUR) return "night";
+  if (isLateNight(input.localHour, input.dayStartHour ?? 4)) return "night";
   if (input.lastPlayedDate && daysBetween(input.lastPlayedDate, input.today) >= COMEBACK_GAP_DAYS) {
     return "comeback";
   }
@@ -307,15 +323,22 @@ export function recommendToday(input: RecommendInput): Recommendation {
   const fillBudget = Math.max(budget - forcedMinutes, GAP_MINUTES);
   let filled = 0;
   let tooBig: RecommendedQuest | null = null;
+  // Habits due today join on top of the one-off picks on a normal day — eight small routines
+  // must not lose the same two every day (docs/SIMULATION.md). Light days cap everything.
+  const isHabit = (c: RecommendedQuest) => byId.get(c.questId)!.type === "daily";
+  let oneOffs = picks.length;
   for (const c of candidates) {
-    if (picks.length >= Math.max(maxPicks, forced.length)) break;
+    if (picks.length >= MAX_PLAN_SIZE) break;
+    if (light && picks.length >= Math.max(maxPicks, forced.length)) break;
     if (picks.includes(c)) continue;
+    if (!light && !isHabit(c) && oneOffs >= Math.max(maxPicks, forced.length)) continue;
     if (filled + c.minutes > fillBudget) {
       if (!tooBig && c.minutes > fillBudget && IMPORTANT.has(c.reason)) tooBig = c;
       continue;
     }
     picks.push(c);
     filled += c.minutes;
+    if (!isHabit(c)) oneOffs += 1;
   }
   if (picks.length === 0 && candidates.length > 0) {
     picks.push(candidates[0]!);

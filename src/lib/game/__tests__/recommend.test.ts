@@ -7,7 +7,9 @@ import {
   GAP_MINUTES,
   LIGHT_PACE,
   MAX_PICKS,
+  MAX_PLAN_SIZE,
   adventurePace,
+  isLateNight,
   eligibleQuests,
   questMinutes,
   recommendToday,
@@ -308,5 +310,37 @@ describe("persona-driven rules", () => {
 
     const onlyMovie = recommendToday(input([reading, movie], { capacityMinutes: 90 }));
     expect(onlyMovie.tooBig).toBeNull();
+  });
+});
+
+describe("simulation-driven rules", () => {
+  it("measures late night from the player's own day start", () => {
+    expect(isLateNight(1, 4)).toBe(true);
+    expect(isLateNight(3, 4)).toBe(true);
+    expect(isLateNight(4, 4)).toBe(false);
+    expect(isLateNight(23, 4)).toBe(false);
+    // A night owl with a 07:00 day start is mid-day at 01:00 and winding down at 05:00.
+    expect(isLateNight(1, 7)).toBe(false);
+    expect(isLateNight(5, 7)).toBe(true);
+    expect(
+      adventurePace({ today: TODAY, localHour: 1, dayStartHour: 7, lastPlayedDate: null }),
+    ).toBe("normal");
+  });
+
+  it("adds the day's habits on top of six one-off picks", () => {
+    const habits = Array.from({ length: 8 }, (_, i) =>
+      quest({
+        type: "daily",
+        repeat: { freq: "daily" },
+        estimatedMinutes: 5,
+        createdAt: `2026-09-01T00:00:0${i}Z`,
+      }),
+    );
+    const sides = Array.from({ length: 8 }, () => quest({ estimatedMinutes: 10 }));
+    const { picks } = recommendToday(input([...habits, ...sides]));
+    expect(picks.filter((p) => habits.some((h) => h.id === p.questId))).toHaveLength(8);
+    expect(picks).toHaveLength(MAX_PLAN_SIZE);
+    const routinesOnly = recommendToday(input(habits));
+    expect(routinesOnly.picks).toHaveLength(8);
   });
 });

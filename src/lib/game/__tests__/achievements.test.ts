@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ACHIEVEMENTS, type ProgressSnapshot, isAchieved, newlyUnlocked } from "../achievements";
+import { xpToReachLevel } from "../level";
 import { statXpToReachLevel } from "../stats";
 
 const empty: ProgressSnapshot = {
@@ -31,10 +32,12 @@ describe("achievements", () => {
   });
 
   it("evaluates each criteria kind", () => {
-    expect(isAchieved({ kind: "level_reached", level: 5 }, { ...empty, totalXp: 4000 })).toBe(true);
-    expect(isAchieved({ kind: "level_reached", level: 5 }, { ...empty, totalXp: 3999 })).toBe(
-      false,
-    );
+    expect(
+      isAchieved({ kind: "level_reached", level: 5 }, { ...empty, totalXp: xpToReachLevel(5) }),
+    ).toBe(true);
+    expect(
+      isAchieved({ kind: "level_reached", level: 5 }, { ...empty, totalXp: xpToReachLevel(5) - 1 }),
+    ).toBe(false);
     expect(isAchieved({ kind: "goal_cleared", count: 1 }, { ...empty, goalsCleared: 1 })).toBe(
       true,
     );
