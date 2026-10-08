@@ -9,7 +9,7 @@ import { addDays, gameDate, questXp, type Difficulty, type QuestType } from "../
 const DB_URL =
   process.env.SUPABASE_DB_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
-async function withDb<T>(fn: (c: pg.Client) => Promise<T>): Promise<T> {
+export async function withDb<T>(fn: (c: pg.Client) => Promise<T>): Promise<T> {
   const client = new pg.Client({ connectionString: DB_URL });
   await client.connect();
   try {
