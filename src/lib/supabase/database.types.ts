@@ -456,6 +456,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      delete_my_account: { Args: Record<PropertyKey, never>; Returns: undefined };
       game_date_at: {
         Args: { p_at: string; p_day_start_hour: number; p_timezone: string };
         Returns: string;
