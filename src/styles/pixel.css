@@ -1,0 +1,257 @@
+/*
+ * Pixel UI primitives (design/PIXEL_RULES.md §2, §6).
+ *
+ * Every pixel element is drawn with zero-blur box-shadows on a 2px unit grid, so it stays
+ * crisp at any DPR without images. Order inside `box-shadow` matters: earlier layers paint
+ * on top, so outline → focus ring → drop shadow.
+ *
+ *   ████████████          outline        1u, notched corners (corners are left uncovered)
+ *  █▓▓▓▓▓▓▓▓▓▓░█         inner hi / lo  1u, top-left lighter, bottom-right darker
+ *  █▓          ░█
+ *  █░░░░░░░░░░░░█▒▒      drop shadow    offset 2u, blur 0, same notched shape
+ *   ████████████ ▒▒
+ */
+
+@layer components {
+  .pixel-art {
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+  }
+
+  .pixel-frame,
+  .pixel-btn,
+  .pixel-bar {
+    --u: var(--pixel-unit);
+    --pf-outline: var(--color-outline);
+    --pf-shadow: var(--color-outline);
+    --pf-ring: 0 0 transparent;
+    --pf-drop: calc(var(--u) * 2) calc(var(--u) * 3) 0 0 var(--pf-shadow),
+      calc(var(--u) * 3) calc(var(--u) * 2) 0 0 var(--pf-shadow),
+      calc(var(--u) * 2) calc(var(--u) * 2) 0 0 var(--pf-shadow);
+    --pf-edges: 0 calc(var(--u) * -1) 0 0 var(--pf-outline), 0 var(--u) 0 0 var(--pf-outline),
+      calc(var(--u) * -1) 0 0 0 var(--pf-outline), var(--u) 0 0 0 var(--pf-outline);
+    --pf-bevel: inset var(--u) var(--u) 0 0 var(--pf-hi),
+      inset calc(var(--u) * -1) calc(var(--u) * -1) 0 0 var(--pf-lo);
+
+    position: relative;
+    border-radius: 0;
+    background-color: var(--pf-bg);
+    box-shadow: var(--pf-bevel), var(--pf-edges), var(--pf-ring), var(--pf-drop);
+  }
+
+  /* ───────── Frame variants ───────── */
+
+  .pixel-frame {
+    --pf-bg: var(--color-surface);
+    --pf-hi: var(--color-surface-raised);
+    --pf-lo: var(--color-bg);
+  }
+
+  .pixel-frame[data-variant="raised"] {
+    --pf-bg: var(--color-surface-raised);
+    --pf-hi: var(--color-ink-600);
+    --pf-lo: var(--color-surface);
+  }
+
+  .pixel-frame[data-variant="parchment"] {
+    --pf-bg: var(--color-parchment-300);
+    --pf-hi: var(--color-parchment-100);
+    --pf-lo: var(--color-parchment-500);
+    color: var(--color-ink-900);
+  }
+
+  .pixel-frame[data-variant="wood"] {
+    --pf-bg: var(--color-parchment-500);
+    --pf-hi: var(--color-parchment-300);
+    --pf-lo: var(--color-parchment-700);
+    color: var(--color-ink-950);
+  }
+
+  .pixel-frame[data-flat] {
+    --pf-drop: 0 0 transparent;
+  }
+
+  /* Quest-type stripe: 4 units on the left edge, inside the outline. */
+  .pixel-frame[data-stripe]::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: calc(var(--u) * 4);
+    background-color: var(--pf-stripe);
+  }
+  .pixel-frame[data-stripe="main"] { --pf-stripe: var(--color-quest-main); }
+  .pixel-frame[data-stripe="daily"] { --pf-stripe: var(--color-quest-daily); }
+  .pixel-frame[data-stripe="side"] { --pf-stripe: var(--color-quest-side); }
+  .pixel-frame[data-stripe="boss"] { --pf-stripe: var(--color-quest-boss); }
+  .pixel-frame[data-stripe="hidden"] { --pf-stripe: var(--color-quest-hidden); }
+
+  /* ───────── Button ───────── */
+
+  .pixel-btn {
+    --pf-bg: var(--color-surface-raised);
+    --pf-hi: var(--color-ink-600);
+    --pf-lo: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pixel-btn:hover {
+    --pf-bg: var(--color-ink-600);
+    --pf-hi: var(--color-ink-500);
+  }
+
+  .pixel-btn[data-variant="accent"] {
+    --pf-bg: var(--color-accent);
+    --pf-hi: var(--color-gold-200);
+    --pf-lo: var(--color-gold-500);
+    color: var(--color-on-accent);
+  }
+  .pixel-btn[data-variant="accent"]:hover {
+    --pf-bg: var(--color-accent-hover);
+    --pf-hi: var(--color-gold-100);
+  }
+
+  .pixel-btn[data-variant="primary"] {
+    --pf-bg: var(--color-primary);
+    --pf-hi: var(--color-royal-400);
+    --pf-lo: var(--color-royal-600);
+    color: var(--color-on-primary);
+  }
+  .pixel-btn[data-variant="primary"]:hover {
+    --pf-bg: var(--color-primary-hover);
+    --pf-hi: var(--color-royal-300);
+  }
+
+  /* Pressed: the button drops onto its own shadow — a physical "click". */
+  .pixel-btn:active:not(:disabled),
+  .pixel-btn[data-pressed] {
+    --pf-drop: 0 0 transparent;
+    transform: translate(calc(var(--u) * 2), calc(var(--u) * 2));
+  }
+
+  .pixel-btn:focus-visible,
+  .pixel-focus:focus-visible {
+    outline: none;
+    --pf-ring: 0 calc(var(--u) * -2) 0 0 var(--color-focus), 0 calc(var(--u) * 2) 0 0 var(--color-focus),
+      calc(var(--u) * -2) 0 0 0 var(--color-focus), calc(var(--u) * 2) 0 0 0 var(--color-focus);
+  }
+
+  .pixel-btn:disabled,
+  .pixel-btn[aria-disabled="true"] {
+    --pf-bg: var(--color-disabled);
+    --pf-hi: var(--color-disabled);
+    --pf-lo: var(--color-disabled);
+    --pf-drop: 0 0 transparent;
+    color: var(--color-text-muted);
+    cursor: not-allowed;
+  }
+
+  /* ───────── Progress bar ───────── */
+
+  .pixel-bar {
+    --pf-bg: var(--color-xp-track);
+    --pf-hi: var(--color-xp-track);
+    --pf-lo: var(--color-xp-track);
+    --pf-drop: 0 0 transparent;
+    --bar-fill: var(--color-xp-fill);
+    --bar-fill-hi: var(--color-xp-fill-highlight);
+    --bar-fill-lo: var(--color-xp-fill-shadow);
+    overflow: hidden;
+  }
+
+  .pixel-bar__fill {
+    height: 100%;
+    width: calc(100% * var(--bar-ratio, 0));
+    /* Snap to whole pixel units — never a half-pixel fill (PIXEL_RULES §6.3). */
+    width: round(down, calc(100% * var(--bar-ratio, 0)), var(--pixel-unit));
+    background-color: var(--bar-fill);
+    box-shadow: inset 0 var(--pixel-unit) 0 0 var(--bar-fill-hi),
+      inset 0 calc(var(--pixel-unit) * -1) 0 0 var(--bar-fill-lo);
+    transition: width 480ms steps(12, end);
+  }
+
+  /* Bar tones — fill / highlight band / shadow band, all from the stat's ramp. */
+  .pixel-bar[data-tone="int"] { --bar-fill: var(--color-royal-300); --bar-fill-hi: var(--color-royal-200); --bar-fill-lo: var(--color-royal-400); }
+  .pixel-bar[data-tone="foc"] { --bar-fill: var(--color-teal-300); --bar-fill-hi: var(--color-teal-200); --bar-fill-lo: var(--color-teal-400); }
+  .pixel-bar[data-tone="vit"] { --bar-fill: var(--color-crimson-300); --bar-fill-hi: var(--color-crimson-200); --bar-fill-lo: var(--color-crimson-400); }
+  .pixel-bar[data-tone="soc"] { --bar-fill: var(--color-ember-300); --bar-fill-hi: var(--color-ember-300); --bar-fill-lo: var(--color-ember-400); }
+  .pixel-bar[data-tone="cre"] { --bar-fill: var(--color-violet-300); --bar-fill-hi: var(--color-violet-200); --bar-fill-lo: var(--color-violet-400); }
+  .pixel-bar[data-tone="success"] { --bar-fill: var(--color-emerald-400); --bar-fill-hi: var(--color-emerald-300); --bar-fill-lo: var(--color-emerald-500); }
+  .pixel-bar[data-tone="boss"] { --bar-fill: var(--color-crimson-400); --bar-fill-hi: var(--color-crimson-300); --bar-fill-lo: var(--color-crimson-500); }
+
+  /* ───────── Tag ───────── */
+
+  .pixel-tag {
+    --u: var(--pixel-unit);
+    display: inline-flex;
+    align-items: center;
+    padding: 0 calc(var(--u) * 2);
+    background-color: var(--tag-bg, var(--color-surface-raised));
+    color: var(--tag-fg, var(--color-on-accent));
+    box-shadow: 0 calc(var(--u) * -1) 0 0 var(--color-outline), 0 var(--u) 0 0 var(--color-outline),
+      calc(var(--u) * -1) 0 0 0 var(--color-outline), var(--u) 0 0 0 var(--color-outline);
+  }
+  .pixel-tag[data-tone="main"] { --tag-bg: var(--color-quest-main); }
+  .pixel-tag[data-tone="daily"] { --tag-bg: var(--color-quest-daily); }
+  .pixel-tag[data-tone="side"] { --tag-bg: var(--color-quest-side); }
+  .pixel-tag[data-tone="boss"] { --tag-bg: var(--color-quest-boss); }
+  .pixel-tag[data-tone="hidden"] { --tag-bg: var(--color-quest-hidden); }
+  .pixel-tag[data-tone="xp"] { --tag-bg: var(--color-xp-track); --tag-fg: var(--color-xp-text); }
+  .pixel-tag[data-tone="muted"] { --tag-bg: var(--color-surface-raised); --tag-fg: var(--color-text-muted); }
+
+  /* ───────── Spinner: three dots lighting up in steps ───────── */
+
+  .pixel-spinner {
+    --u: var(--pixel-unit);
+    display: inline-flex;
+    gap: calc(var(--u) * 2);
+  }
+  .pixel-spinner > [aria-hidden] {
+    width: calc(var(--u) * 2);
+    height: calc(var(--u) * 2);
+    background-color: currentColor;
+    opacity: 0.25;
+    animation: pixel-spinner-step 900ms steps(1, end) infinite;
+  }
+  .pixel-spinner > [aria-hidden]:nth-child(2) { animation-delay: 300ms; }
+  .pixel-spinner > [aria-hidden]:nth-child(3) { animation-delay: 600ms; }
+
+  /* ───────── Skeleton: 2-step brightness pulse, never a shimmer gradient ───────── */
+
+  .pixel-skeleton {
+    background-color: var(--color-surface);
+    animation: pixel-skeleton-step 1600ms steps(1, end) infinite;
+  }
+
+  /* ───────── Pixel text ───────── */
+
+  .font-pixel {
+    -webkit-font-smoothing: none;
+    font-synthesis: none;
+    letter-spacing: 0;
+  }
+}
+
+@keyframes pixel-spinner-step {
+  0% { opacity: 1; }
+  33% { opacity: 0.25; }
+}
+
+@keyframes pixel-skeleton-step {
+  0% { background-color: var(--color-surface); }
+  50% { background-color: var(--color-surface-raised); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-bar__fill {
+    transition: none;
+  }
+  .pixel-spinner > [aria-hidden],
+  .pixel-skeleton {
+    animation: none;
+  }
+  .pixel-spinner > [aria-hidden] {
+    opacity: 1;
+  }
+}
