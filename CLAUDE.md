@@ -13,7 +13,7 @@
 |------|------|
 | 제품 정의, MVP 범위, 사용자 흐름 | `docs/PRODUCT_SPEC.md` |
 | 퀘스트/XP/레벨/스탯/업적 규칙 | `docs/GAME_SYSTEM.md` |
-| AI Game Master 파이프라인/스키마/프롬프트 | `docs/AI_GAME_MASTER.md` |
+| Game Master (추천·브리핑·템플릿, 규칙 기반) | `docs/GAME_MASTER.md` |
 | 스택, 디렉터리, DB 스키마, RLS, 테스트 | `docs/ARCHITECTURE.md` |
 | Phase 계획 | `docs/ROADMAP.md` |
 | 아트 방향 | `design/ART_DIRECTION.md` |
@@ -26,7 +26,7 @@
 
 ## 스택
 
-Next.js (App Router) · TypeScript strict · Tailwind CSS v4 + CSS 변수 토큰 · shadcn/ui(필요한 곳만) · Zod · Supabase (Postgres + Auth + RLS) · Anthropic Claude API · Vitest · Playwright · pnpm · Vercel
+Next.js (App Router) · TypeScript strict · Tailwind CSS v4 + CSS 변수 토큰 · shadcn/ui(필요한 곳만) · Zod · Supabase (Postgres + Auth + RLS) · Vitest · Playwright · pnpm · Vercel
 
 ## 명령어
 
@@ -59,13 +59,10 @@ pnpm art:check      # 배포 PNG의 LIFE-32 팔레트/알파 검사
 - 퀘스트 완료/취소, 업적 지급, Questline 클리어처럼 **XP가 움직이는 모든 작업은 DB RPC(단일 트랜잭션)**로 처리하고 `xp_logs`에 기록한다. 원장 기록은 삭제하지 않고 `reversal`로 정정한다.
 - 미완료로 XP를 깎지 않는다. 스탯은 "평가"가 아닌 "성장 기록"이다 — UI 문구도 마찬가지.
 
-### AI
-- 흐름: `User Input → AI → Structured JSON → Zod 검증 → Application Logic → DB → UI`.
-- AI 출력을 검증 없이 DB에 쓰지 않는다. AI는 **제안**만 하고 사용자가 **수락**해야 저장된다.
-- AI는 XP를 출력하지 않는다 (`difficulty`만). XP는 `questXp()`가 계산한다.
-- Wire 스키마(모델 생성용, 수치 제약 없음)와 Domain 스키마(저장용, 엄격)를 분리한다.
-- 모델 ID·effort 등 설정은 `src/lib/ai/config.ts` 한 곳. API 키는 서버 전용(`server-only`).
-- AI 장애 시에도 핵심 루프(퀘스트 CRUD/완료, Today's Adventure 결정적 추천)는 동작해야 한다.
+### Game Master
+- **LLM/외부 AI API를 쓰지 않는다** (2026-10-08 결정). 추천·브리핑·템플릿은 `lib/game`의 결정적 규칙.
+- 사용자는 XP를 입력하지 않는다 (`difficulty`만). XP는 `questXp()`가 계산한다.
+- GM은 추천만, 결정은 플레이어 — 추천 목록은 언제나 수정 가능해야 한다.
 
 ### 데이터 & 보안
 - 스키마 변경은 `supabase/migrations/*.sql`로만. 모든 테이블 RLS 활성화.

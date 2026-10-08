@@ -10,13 +10,13 @@
 | 영역 | 선택 | 이유 |
 |------|------|------|
 | Framework | **Next.js (App Router, 최신 stable)** + React | RSC로 대시보드 초기 로드 최적화, Server Actions로 폼/뮤테이션 단순화, Vercel 1급 지원 |
-| Language | **TypeScript `strict`** + `noUncheckedIndexedAccess` | 게임 규칙·AI 스키마의 타입 안전성 |
+| Language | **TypeScript `strict`** + `noUncheckedIndexedAccess` | 게임 규칙·폼 스키마의 타입 안전성 |
 | Styling | **Tailwind CSS v4** (CSS-first `@theme`) + CSS Variables | 디자인 토큰을 CSS 변수 하나로 관리 → Tailwind 유틸리티와 픽셀 컴포넌트가 같은 토큰 사용 |
 | UI primitives | **shadcn/ui (선택적)** — Dialog, Popover, DropdownMenu, Toast, Calendar 정도 | 접근성 있는 Radix 기반 동작만 차용, 시각은 우리 토큰으로 재스킨 |
-| Validation | **Zod** | 폼·Server Action 입력·AI 출력 공통 검증 |
+| Validation | **Zod** | 폼·Server Action 입력·DB JSON(repeat_rule 등) 공통 검증 |
 | Database | **Supabase PostgreSQL** | RLS, RPC(트랜잭션 함수), 마이그레이션 CLI |
 | Auth | **Supabase Auth** (`@supabase/ssr`) | Magic link + Google OAuth (Kakao는 Beta 이후) |
-| AI | **Anthropic Claude API** (`@anthropic-ai/sdk`), 기본 모델 `claude-opus-5-5` | Structured outputs(`output_config.format` + Zod) 지원. 상세: [AI_GAME_MASTER](./AI_GAME_MASTER.md) |
+| AI | **사용하지 않음** (2026-10-08 결정) | Game Master는 규칙 기반 — [GAME_MASTER](./GAME_MASTER.md) |
 | Testing | **Vitest** (unit) + **Playwright** (e2e smoke) | `lib/game` 순수 함수 100% 커버리지, 핵심 플로우 e2e |
 | Lint/Format | ESLint (next config) + Prettier (+ tailwind plugin) | |
 | Package manager | **pnpm** | |
@@ -49,9 +49,8 @@
    │  │  ├─ quests/              # 퀘스트 목록/상세/편집
    │  │  ├─ calendar/
    │  │  ├─ character/           # 스탯, 업적, XP 기록
-   │  │  ├─ game-master/         # AI 입력/제안 검토
    │  │  └─ settings/
-   │  └─ api/                    # Route Handlers (AI 스트리밍 등 Server Action으로 부적합한 것만)
+   │  └─ auth/                   # Route Handlers (OAuth/OTP 콜백 등 Server Action으로 부적합한 것만)
    ├─ components/
    │  ├─ ui/                     # Modern primitives: Button, Input, Dialog, Sheet, Toast …
    │  ├─ pixel/                  # Pixel primitives: PixelFrame, PixelIcon, Sprite, PixelBar, PixelBadge
@@ -63,12 +62,10 @@
    │  ├─ achievements/
    │  ├─ adventure/
    │  ├─ calendar/
-   │  └─ game-master/
    ├─ lib/
    │  ├─ game/                   # ★ 게임 규칙 단일 소스 (순수 TS, React/DB 의존 금지)
-   │  │  ├─ xp.ts  level.ts  stats.ts  titles.ts  achievements.ts  recommend.ts  time.ts
+   │  │  ├─ xp.ts  level.ts  stats.ts  titles.ts  achievements.ts  recommend.ts  briefing.ts  templates.ts  time.ts
    │  │  └─ __tests__/
-   │  ├─ ai/                     # Anthropic client, prompts/, schemas/, context builders
    │  ├─ supabase/               # server.ts / client.ts / middleware.ts, database.types.ts(생성)
    │  └─ utils/
    ├─ styles/
@@ -107,16 +104,13 @@ Client form / button
   → Client: useOptimistic로 즉시 반영, 결과 이벤트로 연출 큐 실행
 ```
 
-### 3.3 AI
+### 3.3 Game Master (규칙 기반)
 ```
-User Input → Route Handler/Server Action → lib/ai (context build + prompt)
-  → Claude (structured output, Zod wire schema)
-  → Domain Zod 재검증 + 정규화 (날짜, 길이, enum, XP 계산)
-  → ai_requests에 제안 저장 (status: proposed)
-  → UI: 제안 카드 검토/수정
-  → 사용자 수락 → Server Action → quests INSERT (source='ai', ai_request_id)
+adventure/actions.ts → queries (활성 퀘스트, 최근 완료, 오늘 일정)
+  → lib/game/recommend.ts (점수) + lib/game/briefing.ts (대사 템플릿)
+  → adventures(game_date) upsert → UI
 ```
-AI 출력은 **절대 직접 DB에 쓰지 않는다.** 상세: [AI_GAME_MASTER §2](./AI_GAME_MASTER.md#2-pipeline).
+외부 API 호출 없음. 상세: [GAME_MASTER](./GAME_MASTER.md).
 
 ## 4. 인증 & 라우팅
 
@@ -135,7 +129,7 @@ create type quest_status as enum ('active','completed','expired','archived');
 create type stat_type    as enum ('int','foc','vit','soc','cre');
 create type goal_status  as enum ('active','cleared','archived');
 create type xp_reason    as enum ('quest_complete','goal_clear','achievement','streak_bonus','reversal','admin_adjust');
-create type quest_source as enum ('manual','ai','template','system');
+create type quest_source as enum ('manual','template','system');
 ```
 
 ### 5.2 Tables (요약)
@@ -192,7 +186,6 @@ quests (
   repeat_rule jsonb,                   -- GAME_SYSTEM §1.5, Zod 검증
   sort_order int not null default 0,
   source quest_source not null default 'manual',
-  ai_request_id uuid references ai_requests on delete set null,
   created_at, updated_at, completed_at timestamptz,
   check (type <> 'boss'  or deadline is not null),
   check (type <> 'daily' or repeat_rule is not null),
@@ -214,13 +207,13 @@ schedules (                              -- 고정 시간 일정
   title text not null, starts_at timestamptz not null, ends_at timestamptz,
   all_day boolean not null default false, location text,
   quest_id uuid references quests on delete set null,
-  source text not null default 'manual',  -- 'manual' | 'ai' | (later) 'google'
+  source text not null default 'manual',  -- 'manual' | (later) 'google'
   created_at
 )
 
 adventures (                             -- Today's Adventure
   id uuid pk, user_id uuid not null, game_date date not null,
-  quest_ids uuid[] not null, briefing text, source text not null, -- 'auto' | 'ai'
+  quest_ids uuid[] not null, briefing text, source text not null, -- 'auto' | 'custom'
   started_at timestamptz not null default now(),
   unique (user_id, game_date)
 )
@@ -237,16 +230,6 @@ user_achievements (
   primary key (user_id, achievement_id)
 )
 
-ai_requests (                            -- AI 감사 로그 + rate limit + 제안 보관
-  id uuid pk, user_id uuid not null,
-  kind text not null,                    -- 'parse_quests' | 'breakdown_goal' | 'plan_today'
-  input_text text, model text not null,
-  status text not null,                  -- 'pending' | 'proposed' | 'accepted' | 'rejected' | 'failed'
-  output jsonb, error_code text,
-  input_tokens int, output_tokens int, latency_ms int,
-  created_at timestamptz not null default now()
-)
--- 30일 후 input_text/output 마스킹 (pg_cron)
 ```
 
 ### 5.3 RLS 정책 원칙
@@ -262,7 +245,6 @@ ai_requests (                            -- AI 감사 로그 + rate limit + 제�
 | adventures | own | own | own | — |
 | achievements | all authenticated | — | — | — |
 | user_achievements | own | **RPC only** | — | — |
-| ai_requests | own | server only | server only | — |
 
 "own" = `user_id = (select auth.uid())`. RPC는 `SECURITY DEFINER`, `set search_path = ''`, 함수 내 소유권 검증.
 
@@ -278,7 +260,7 @@ ai_requests (                            -- AI 감사 로그 + rate limit + 제�
 ## 6. 에러/로딩/빈 상태 규약
 
 - Server Action은 `Result<T, AppError>` 형태로 반환 (`{ ok: true, data } | { ok: false, error: { code, message } }`). throw는 예상치 못한 오류만.
-- `AppError.code`는 enum (`QUEST_NOT_FOUND`, `ALREADY_COMPLETED`, `AI_RATE_LIMITED`, `AI_INVALID_OUTPUT` …) → UI 문구 매핑은 `src/lib/errors/messages.ko.ts` 한 곳.
+- `AppError.code`는 enum (`QUEST_NOT_FOUND`, `ALREADY_COMPLETED`, `UNAUTHENTICATED`, `VALIDATION_FAILED` …) → UI 문구 매핑은 `src/lib/errors/messages.ko.ts` 한 곳.
 - 모든 라우트 세그먼트에 `loading.tsx`(픽셀 스켈레톤) / `error.tsx` 제공. 빈 상태는 [UI_GUIDE §8](../design/UI_GUIDE.md#8-states-loading--empty--error).
 
 ## 7. 테스트 전략
@@ -286,7 +268,6 @@ ai_requests (                            -- AI 감사 로그 + rate limit + 제�
 | 레이어 | 도구 | 범위 |
 |--------|------|------|
 | `lib/game` | Vitest | 100% 브랜치 커버리지 목표 (규칙이 곧 제품) |
-| `lib/ai` | Vitest + 고정 fixture | wire→domain 정규화, 날짜 해석, 잘못된 출력 거부 |
 | RPC/RLS | Supabase local + SQL 테스트 (pgTAP 또는 Vitest+supabase-js) | 이중 완료, 타인 데이터 접근 거부, reversal |
 | UI | Playwright | 가입→캐릭터 생성→퀘스트 생성→완료→XP 반영 smoke |
 | 시각 | Playwright 스크린샷 (Phase 8) | 픽셀 컴포넌트 회귀 |
@@ -299,8 +280,6 @@ CI(GitHub Actions): `typecheck` → `lint` → `test` → `build`. Vercel Previe
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=     # (또는 publishable key)
 SUPABASE_SERVICE_ROLE_KEY=         # 서버 전용, 마이그레이션/관리 스크립트만. 요청 경로에서 사용 금지
-ANTHROPIC_API_KEY=                 # 서버 전용
-AI_DAILY_REQUEST_LIMIT=30
 NEXT_PUBLIC_SITE_URL=
 ```
 - `.env.example`만 커밋. `NEXT_PUBLIC_` 접두사가 없는 키는 클라이언트 번들에 들어가지 않도록 `server-only` 모듈에서만 import.

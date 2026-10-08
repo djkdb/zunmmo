@@ -17,7 +17,7 @@
 | W3–4 | **4. Quest Engine** | 퀘스트 CRUD, 타입/난이도/반복/마감, 대시보드 v1 |
 | W4–5 | **5. XP + Level + Achievement** | `complete_quest` RPC, 원장, 레벨업/업적 연출, 스탯 |
 | W5–6 | **6. Calendar** | 주/월 뷰, 일정, 퀘스트 연결, Today's Adventure(결정적) |
-| W6–7 | **7. AI Game Master** | F1/F2/F3, 제안 검토 UI, rate limit, eval |
+| W6–7 | **7. Game Master (규칙 기반)** | GM 브리핑, 퀘스트 템플릿, 빠른 추가 고도화, Questline 단계 입력 |
 | W7–8 | **8. Animation + Pixel Polish** | 스프라이트 상태 확장, 연출 다듬기, 시각 회귀 테스트 |
 | W8–9 | **9. Beta** | 10–30명 클로즈드 베타, 계측, 버그/밸런스 수정 |
 | W10 | **10. Production Launch** | 개인정보처리방침/약관, 모니터링, 공개 |
@@ -27,7 +27,7 @@
 ## Phase 0 — Repository Audit + Architecture ✅ (이번 작업)
 - [x] Repository 분석 (빈 저장소, greenfield)
 - [x] 스택/아키텍처 제안 → `docs/ARCHITECTURE.md`
-- [x] 제품/게임/AI 문서 → `docs/PRODUCT_SPEC.md`, `GAME_SYSTEM.md`, `AI_GAME_MASTER.md`
+- [x] 제품/게임/GM 문서 → `docs/PRODUCT_SPEC.md`, `GAME_SYSTEM.md`, `GAME_MASTER.md`
 - [x] 디자인 시스템 문서 → `design/*.md`
 - [x] `CLAUDE.md`
 
@@ -87,15 +87,16 @@
 - 주간(기본, 모바일)/월간 뷰, 퀘스트 마감·일정·daily 회차 표시
 - Today's Adventure (결정적 `recommendToday`) + **START TODAY'S ADVENTURE** CTA 실동작
 
-**Exit**: AI 없이 Today's Adventure 전체 플로우 동작
+**Exit**: Today's Adventure 전체 플로우 동작 (외부 API 없이)
 
-## Phase 7 — AI Game Master
-- `ai_requests` + rate limit, `lib/ai` (config, prompts, wire/domain schema, normalize)
-- F1 자연어 → 퀘스트 (GM 화면 + 대시보드 빠른 입력), 제안 검토 UI
-- F2 목표 분해, F3 Today's Adventure AI 브리핑
-- Eval 세트 30+ 케이스, 지표 기록
+## Phase 7 — Game Master (규칙 기반)
+> 2026-10-08 결정: Claude API(LLM) 연동 제외. GM은 결정적 규칙 + 템플릿 ([GAME_MASTER](./GAME_MASTER.md)).
+- GM 브리핑 (상황 판정 + 문장 템플릿, 날짜 기반 결정적 선택)
+- 퀘스트 템플릿 30개 내외 (카테고리별), 온보딩 첫 퀘스트 선택
+- 빠른 추가: 날짜 칩, 타입별 기본값
+- Questline 생성 시 단계 여러 줄 입력
 
-**Exit**: [AI_GAME_MASTER §11](./AI_GAME_MASTER.md#11-품질-평가-eval) 기준 충족
+**Exit**: 템플릿만으로 온보딩 → 첫 XP까지 3분 이내, 브리핑/추천 로직 단위 테스트
 
 ## Phase 8 — Animation + Pixel Polish
 - 캐릭터 상태: walking, studying, working, exercising, celebrating, sleeping, level-up
@@ -105,11 +106,11 @@
 
 ## Phase 9 — Beta
 - 10–30명 클로즈드 베타, 피드백 채널, 이벤트 계측(PRODUCT_SPEC §9 지표)
-- 밸런스 조정(레벨 곡선/XP), AI 프롬프트 개선, 버그 수정
+- 밸런스 조정(레벨 곡선/XP), 추천 가중치·GM 문장 다듬기, 버그 수정
 - PWA (manifest, 아이콘), 오류 모니터링
 
 ## Phase 10 — Production Launch
-- 개인정보처리방침/이용약관 (AI 처리 위탁 포함), 계정 삭제 기능
+- 개인정보처리방침/이용약관, 계정 삭제 기능
 - 백업/복구 확인, rate limit/비용 알림, 도메인/OG
 - 공개 + 런치 노트
 
@@ -123,6 +124,5 @@ HIDDEN QUEST · 주간 모험 일지 · Google Calendar 동기화 · 푸시 알�
 | 리스크 | 영향 | 대응 |
 |--------|------|------|
 | 픽셀 아트 제작량 | 일정 지연, 품질 불균일 | MVP 에셋 목록 고정(CHARACTER_GUIDE §9), 1인 아트 오너, 팔레트/그리드 검수 체크리스트 |
-| AI 비용/지연 | 사용성·비용 | 결정적 폴백, effort 조정, 캐싱, 일일 한도 |
 | "또 하나의 Todo 앱" 인상 | 리텐션 | 완료 연출·캐릭터 반응을 Phase 5부터 우선 구현, Beta에서 정성 인터뷰 |
 | 과도한 범위 | 일정 | Out of Scope 목록(PRODUCT_SPEC §6) 준수, Phase별 Exit 기준 |

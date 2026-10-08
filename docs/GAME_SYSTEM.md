@@ -29,7 +29,7 @@ type QuestType = 'main' | 'daily' | 'side' | 'boss' | 'hidden'; // hidden: post-
 | daily | 선택 | 없음 | **필수** | 회차(occurrence) 단위 완료 |
 | side | 선택 | 선택 | 선택 | 반복 가능한 취미도 side |
 | boss | 선택 | **필수** | 없음 | D-day 표시, 마감 후 `expired` |
-| hidden | 선택 | 선택 | 선택 | 시스템/AI만 생성 (post-MVP) |
+| hidden | 선택 | 선택 | 선택 | 시스템만 생성 (post-MVP) |
 
 ### 1.2 난이도 → 기본 XP
 
@@ -61,7 +61,7 @@ export function questXp(type: QuestType, difficulty: Difficulty): number {
 }
 ```
 
-> AI는 XP를 출력하지 않는다. AI는 `difficulty`만 제안하고 XP는 항상 `questXp()`가 계산한다. ([AI_GAME_MASTER §5](./AI_GAME_MASTER.md))
+> 폼·템플릿 어디에도 XP 입력은 없다. 사용자는 `difficulty`만 고르고 XP는 항상 `questXp()`가 계산한다.
 
 ### 1.4 상태 (Status)
 
@@ -243,12 +243,12 @@ post-MVP: 가장 높은 스탯에 따라 클래스 칭호 접미사 (INT → Sag
 | **SOC** | Social | 관계·소통 | 친구, 가족, 모임 | `--color-stat-soc` |
 | **CRE** | Creativity | 창작·취미·놀이 | 그림, 음악, 영화, 축구 | `--color-stat-cre` |
 
-- 모든 퀘스트는 `primary_stat` 1개를 가진다 (AI가 제안, 사용자가 수정 가능).
+- 모든 퀘스트는 `primary_stat` 1개를 가진다 (카테고리/타입 기본값, 사용자가 수정 가능).
 - 완료 시 퀘스트 XP 전액이 해당 스탯의 `stat_xp`에 누적된다 (캐릭터 total XP와 별개 누적).
 - 스탯 레벨: `statLevel = floor(sqrt(stat_xp / 50))` → 50 XP=Lv1, 200=Lv2, 1,250=Lv5, 5,000=Lv10. 초반 빠르고 이후 완만 (`src/lib/game/stats.ts`).
 - 표시: 레이더 차트 대신 **픽셀 막대 + 숫자** (MVP). 다른 사용자와 비교하는 표현 금지.
 
-### 5.1 카테고리 → 스탯 기본 매핑 (AI/폼 기본값)
+### 5.1 카테고리 → 스탯 기본 매핑 (템플릿/폼 기본값)
 
 | category | stat |
 |---|---|
@@ -300,7 +300,7 @@ type AchievementCriteria =
 
 ## 8. Today's Adventure — 결정적(Deterministic) 추천 점수
 
-AI 없이도 동작하는 기본 추천 알고리즘. AI는 이 결과를 **입력으로 받아** 조정·설명한다 ([AI_GAME_MASTER §6.3](./AI_GAME_MASTER.md)).
+Game Master의 오늘의 모험 추천 알고리즘 (결정적, 외부 API 없음). 사용 방식은 [GAME_MASTER §3](./GAME_MASTER.md#3-g1--todays-adventure-추천).
 
 ```ts
 score(q) =
@@ -329,8 +329,7 @@ profiles 1─1 characters 1─N character_stats
    │              └────────────┴──▶ xp_logs ◀── goals (clear bonus), achievements
    ├─N schedules ──(optional)──▶ quests
    ├─N user_achievements N─1 achievements
-   ├─N adventures (오늘의 모험: date + quest_ids)
-   └─N ai_requests ──▶ quests.ai_request_id
+   └─N adventures (오늘의 모험: date + quest_ids)
 ```
 
 ## 10. 테스트 요구사항 (`src/lib/game/__tests__`)

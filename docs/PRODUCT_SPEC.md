@@ -3,7 +3,7 @@
 > 현실의 일정·목표·습관·취미를 MMORPG 퀘스트로 바꾸고, 실제 행동에 따라 캐릭터가 성장하는 개인 맞춤형 Life RPG Web App.
 
 - 문서 상태: v0.1 (Phase 0)
-- 관련 문서: [GAME_SYSTEM](./GAME_SYSTEM.md) · [AI_GAME_MASTER](./AI_GAME_MASTER.md) · [ARCHITECTURE](./ARCHITECTURE.md) · [ROADMAP](./ROADMAP.md) · [design/](../design/)
+- 관련 문서: [GAME_SYSTEM](./GAME_SYSTEM.md) · [GAME_MASTER](./GAME_MASTER.md) · [ARCHITECTURE](./ARCHITECTURE.md) · [ROADMAP](./ROADMAP.md) · [design/](../design/)
 
 ---
 
@@ -20,7 +20,7 @@
 | P1 | **Play, not manage** | 모든 화면은 "관리"가 아니라 "모험 진행"으로 읽혀야 한다. | 체크박스 리스트 + 우측에 작은 XP 숫자 |
 | P2 | **5초 안에 이해** | 앱을 켜면 5초 안에 나/레벨/오늘 할 일/가장 중요한 퀘스트/누를 버튼을 안다. | 대시보드에 동일 가중치 카드 10개 |
 | P3 | **성장 기록, 평가 아님** | 스탯과 레벨은 "내가 쌓은 것"의 기록이다. 사용자를 판단·비교·처벌하지 않는다. | "당신의 INT는 평균 이하입니다", 미완료 시 XP 차감 |
-| P4 | **AI는 Game Master, 결정권은 플레이어** | AI는 퀘스트를 *제안*하고, 사용자가 *수락*해야 저장된다. | AI가 사용자 확인 없이 퀘스트 생성 |
+| P4 | **GM은 안내, 결정권은 플레이어** | GM은 오늘의 퀘스트를 *추천*하고, 플레이어가 고른다. | 추천을 바꿀 수 없게 고정 |
 | P5 | **Pixel Art = 브랜드** | 캐릭터·아이콘·이펙트는 일관된 고품질 픽셀 아트. 데이터/폼은 현대적 UX. | 캐릭터만 픽셀이고 나머지는 generic SaaS |
 | P6 | **모바일 퍼스트 일상 도구** | 하루에 여러 번, 한 손으로, 몇 초 만에 퀘스트를 완료할 수 있어야 한다. | 퀘스트 완료에 3번 이상의 탭 필요 |
 
@@ -36,7 +36,7 @@
 1. "할 일이 너무 많아 뭘 먼저 할지 모르겠을 때, *오늘 무엇을 할지* 정해 주면 좋겠다." → Today's Adventure
 2. "큰 목표가 막연할 때, *지금 할 수 있는 단계*로 쪼개 주면 좋겠다." → Goal Breakdown
 3. "꾸준히 했다는 걸 *눈에 보이게* 느끼고 싶다." → XP / Level / Stats / Achievement
-4. "일정을 일일이 입력하기 귀찮다. *말하듯 적으면* 정리해 주면 좋겠다." → Natural Language → Quest
+4. "일정을 일일이 입력하기 귀찮다. *몇 번의 탭으로* 등록하고 싶다." → 빠른 추가 + 퀘스트 템플릿
 
 ## 4. 핵심 개념 (Glossary)
 
@@ -50,7 +50,7 @@
 | **Stat** | INT/FOC/VIT/SOC/CRE. 퀘스트 카테고리별 누적 성장 기록. | 삶의 영역별 투자 |
 | **Achievement** | 특정 조건 달성 시 해금되는 배지. | 이정표 |
 | **Today's Adventure** | 오늘 하기로 선택한 퀘스트 묶음. | 오늘의 계획 |
-| **Game Master (GM)** | 자연어를 퀘스트로 설계하고 오늘의 모험을 추천하는 AI. | 코치/플래너 |
+| **Game Master (GM)** | 오늘의 모험을 추천하고 상황별 한마디를 건네는 게임 속 진행자. 규칙 기반 (LLM 미사용). | 코치/플래너 |
 | **Schedule** | 시간이 고정된 일정(수업, 축구 경기). 퀘스트와 연결 가능. | 캘린더 이벤트 |
 
 ## 5. Quest 타입
@@ -61,7 +61,7 @@
 | **DAILY** | 해/모래시계 | 매일(또는 요일별) 반복 습관 | 반복 | "운동 30분", "영단어 30개" |
 | **SIDE** | 두루마리 | 취미·여가·자유 활동 | 단발/반복 | "축구하기", "영화 보기", "친구 만나기" |
 | **BOSS** | 해골 투구 | 시험·마감·큰 도전 | 단발, 마감 필수 | "AI 중간고사", "프로젝트 최종 발표" |
-| **HIDDEN** *(post-MVP)* | ? 상자 | 행동 패턴 기반 AI 발견 퀘스트 | — | "3주 연속 아침 운동 — 숨겨진 업적" |
+| **HIDDEN** *(post-MVP)* | ? 상자 | 행동 패턴 기반으로 시스템이 여는 숨은 퀘스트 | — | "3주 연속 아침 운동 — 숨겨진 업적" |
 
 세부 규칙(XP, 반복, 마감, 상태)은 [GAME_SYSTEM.md](./GAME_SYSTEM.md) 참조.
 
@@ -70,13 +70,13 @@
 ### In Scope
 - **Landing**: 브랜드 + 픽셀 히어로 + 가입 CTA
 - **Auth**: 이메일 Magic Link + Google OAuth (Supabase Auth)
-- **Onboarding**: 캐릭터 이름/외형(프리셋 4종) 선택 → 첫 퀘스트 3개 생성(AI 또는 템플릿)
-- **Dashboard ("Adventure")**: Character / Level / XP / Today's Adventure / Main / Daily / Side / Boss / GM CTA / Recent Progress
+- **Onboarding**: 캐릭터 이름/외형(프리셋 4종) 선택 → 첫 퀘스트 3개를 템플릿에서 선택
+- **Dashboard ("Adventure")**: Character / Level / XP / Today's Adventure / Main / Daily / Side / Boss / 퀘스트 추가 / Recent Progress
 - **Quest Engine**: CRUD, 타입·난이도·마감·반복 규칙, 완료/완료취소
 - **XP / Level / Stats**: transaction-safe 완료 처리, `xp_logs`, 레벨업 연출
 - **Achievement**: 데이터 기반 배지 15–20종
 - **Calendar**: 주간/월간 뷰, 퀘스트 마감·일정 표시, 일정 ↔ 퀘스트 연결
-- **AI Game Master**: 자연어 → 퀘스트 제안, 목표 분해, Today's Adventure 추천 + 브리핑
+- **Game Master (규칙 기반)**: Today's Adventure 추천, 상황별 GM 브리핑, 퀘스트 템플릿, 빠른 추가, Questline 단계 입력 ([GAME_MASTER](./GAME_MASTER.md))
 - **PWA 기본**: 홈 화면 추가, 모바일 하단 내비게이션
 
 ### Out of Scope (MVP 이후)
@@ -90,15 +90,15 @@
 ### 7.1 첫 방문 → 첫 XP (목표: 3분 이내)
 ```
 Landing ─[모험 시작하기]→ Sign up ─→ 캐릭터 생성(이름·외형)
-  ─→ "지금 머릿속에 있는 할 일을 편하게 적어 보세요" (GM 입력)
-  ─→ 퀘스트 제안 카드 검토/수정 ─[퀘스트 수락]→ Dashboard
+  ─→ "자주 하는 일부터 골라 볼까?" (퀘스트 템플릿에서 3개 선택)
+  ─→ Dashboard
   ─→ 첫 퀘스트 완료 → "+40 XP" 연출 → 첫 업적 "첫 걸음" 해금
 ```
 
 ### 7.2 매일 아침 (목표: 30초)
 ```
 앱 열기 → Dashboard → [START TODAY'S ADVENTURE]
-  → GM이 오늘의 퀘스트 3–6개 추천 + 한 줄 브리핑
+  → GM이 오늘의 퀘스트 3–6개 추천 + 한 줄 브리핑 (규칙 기반)
   → 추가/제외 조정 → 확정 → Today's Adventure 패널 고정
 ```
 
@@ -109,8 +109,8 @@ Dashboard → 퀘스트 카드의 완료 버튼 탭 → XP 플로팅 + XP 바 �
 
 ### 7.4 새 일정이 생겼을 때
 ```
-GM 입력: "다음 주 수요일까지 운영체제 레포트"
-  → BOSS/MAIN/SIDE 판단 + 마감 + 난이도 제안 → 수락
+[+ 퀘스트 추가] → "운영체제 레포트" · BOSS · ⭐⭐⭐⭐ · [다음 주 수요일]
+  → 저장 → 보스 D-day가 대시보드에 표시
 ```
 
 ## 8. Dashboard 정보 계층
@@ -135,16 +135,16 @@ GM 입력: "다음 주 수요일까지 운영체제 레포트"
 | Day-7 Retention | 가입 7일 후 퀘스트 1개 이상 완료 | ≥ 30% |
 | Adventure Start Rate | 활성 일 중 Today's Adventure 시작 비율 | ≥ 50% |
 | Quests / Active Day | 활성 사용자 1인 1일 평균 완료 퀘스트 수 | ≥ 3 |
-| GM Acceptance | AI 제안 퀘스트 중 수락 비율 | ≥ 70% |
+| Recommendation Keep | Today's Adventure 추천 중 플레이어가 빼지 않은 비율 | ≥ 70% |
 | Time-to-complete | 대시보드 진입 → 퀘스트 완료까지 탭 수 | ≤ 2 |
 
 ## 10. 비기능 요구사항
 
 - **성능**: 모바일 4G 기준 Dashboard LCP < 2.5s, 퀘스트 완료 응답(낙관적 UI) < 100ms 체감
 - **접근성**: WCAG 2.1 AA 대비, 키보드 조작, `prefers-reduced-motion` 존중, 터치 타깃 ≥ 44px
-- **신뢰성**: XP 이중 지급 0건 (DB 제약으로 보장), AI 장애 시에도 핵심 루프(퀘스트 CRUD/완료) 동작
-- **보안/프라이버시**: 모든 테이블 RLS, AI에 보내는 개인 데이터 최소화, AI 요청 로그 보존 기간 명시(30일)
-- **비용**: AI 호출은 사용자당 일일 한도(초기 30회) 및 서버 측 rate limit
+- **신뢰성**: XP 이중 지급 0건 (DB 제약으로 보장), 외부 API 의존 없음 (핵심 루프는 DB만 필요)
+- **보안/프라이버시**: 모든 테이블 RLS, 개인 데이터를 외부 AI로 보내지 않음
+- **비용**: 외부 유료 API 없음 (Supabase + Vercel만)
 
 ## 11. 결정이 필요한 열린 질문
 
@@ -154,4 +154,4 @@ GM 입력: "다음 주 수요일까지 운영체제 레포트"
 | Q2 | BOSS 퀘스트 XP 배율 | ×2.5 (⭐5 Boss = 500 XP) |
 | Q3 | 하루 경계 시각 | 사용자 로컬 04:00 (설정 가능) |
 | Q4 | 서비스명/도메인 | "LIFE RPG" (가칭) |
-| Q5 | AI 사용량 무료 한도 | 1일 30회 |
+| Q5 | 외부 AI(LLM) 사용 | **제외 결정 (2026-10-08)** — 규칙 기반 GM |

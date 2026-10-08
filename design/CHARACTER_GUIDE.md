@@ -82,7 +82,7 @@
 | `studying` | 4 | 220 | ∞ | 진행 중 퀘스트 stat=INT | idle | 8 |
 | `working` | 4 | 160 (타이핑) | ∞ | 진행 중 퀘스트 stat=FOC | idle | 8 |
 | `exercising` | 6 | 120 | ∞ | 진행 중 퀘스트 stat=VIT | idle | 8 |
-| `thinking` | 4 | 250 | ∞ | AI GM 응답 대기 중 | idle | 7 |
+| `thinking` | 4 | 250 | ∞ | 오늘의 모험 추천을 고르는 중 (짧은 연출) | idle | 8 |
 | `celebrating` | 6 | 90, 90, 90, 90, 120, 200 | 1회 → idle | **퀘스트 완료** | idle | **5** |
 | `sleeping` | 4 | 400 ("Z" 파티클 별도) | ∞ | 사용자 로컬 00–06시 & 오늘 활동 없음 | idle | 8 |
 | `surprised` | 3 | 80, 80, 300 | 1회 → idle | 업적 해금, 히든 퀘스트 발견 | celebrating | 8 |
@@ -190,7 +190,7 @@ play('level-up');              // 우선순위 높은 상태는 현재 일회성
 | 4 | 레벨업 빛기둥 이펙트 | 32×64 ×6f | 5 |
 | 5 | 완료 반짝임 파티클 | 8×8 ×5f | 5 |
 | 6 | walking (랜딩) | 32×32 ×6f | 2 |
-| 7 | thinking (GM 대기) | 32×32 ×4f | 7 |
+| 7 | thinking (모험 준비) | 32×32 ×4f | 8 |
 | 8 | 나머지 상태 | — | 8 |
 
 ## 10. 캐릭터 반응 매핑 (Game Event → State)
@@ -201,6 +201,6 @@ play('level-up');              // 우선순위 높은 상태는 현재 일회성
 | BOSS 클리어 | `celebrating` ×1 + 보스 처치 이펙트 | 보스 아이콘 파괴 연출 |
 | 레벨업 | `level-up` | 레벨업 모달 |
 | 업적 해금 | `surprised` | 업적 토스트 |
-| GM 응답 대기 | `thinking` | "GM이 퀘스트를 설계하는 중…" |
+| 오늘의 모험 추천 계산 | `thinking` (최소 600ms) | "오늘의 모험을 고르는 중…" |
 | 오늘 모험 시작 | `walking` 1루프 → idle | 모험 패널 펼침 |
 | 심야 + 무활동 | `sleeping` | 대시보드 문구 "푹 쉬는 것도 모험의 일부야" |

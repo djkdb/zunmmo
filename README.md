@@ -12,10 +12,10 @@ pnpm test
 
 ## 문서
 
-- 제품: [PRODUCT_SPEC](docs/PRODUCT_SPEC.md) · [GAME_SYSTEM](docs/GAME_SYSTEM.md) · [AI_GAME_MASTER](docs/AI_GAME_MASTER.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [ROADMAP](docs/ROADMAP.md)
+- 제품: [PRODUCT_SPEC](docs/PRODUCT_SPEC.md) · [GAME_SYSTEM](docs/GAME_SYSTEM.md) · [GAME_MASTER](docs/GAME_MASTER.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [ROADMAP](docs/ROADMAP.md)
 - 디자인: [ART_DIRECTION](design/ART_DIRECTION.md) · [PIXEL_RULES](design/PIXEL_RULES.md) · [COLOR_PALETTE](design/COLOR_PALETTE.md) · [CHARACTER_GUIDE](design/CHARACTER_GUIDE.md) · [UI_GUIDE](design/UI_GUIDE.md)
 - 개발 규칙: [CLAUDE.md](CLAUDE.md)
 
 ## Stack
 
-Next.js · TypeScript · Tailwind CSS v4 · Supabase (Postgres/Auth) · Claude API · Vercel
+Next.js · TypeScript · Tailwind CSS v4 · Supabase (Postgres/Auth) · Vercel
