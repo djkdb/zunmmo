@@ -24,6 +24,14 @@ export interface ScheduleView {
   minutes: number;
   /** Weekly repeat of the series this occurrence belongs to. */
   repeat: { weekdays: number[]; until: GameDate | null } | null;
+  /** Set when this is one occurrence of a series changed on its own ("이번만 변경"). */
+  changed: ChangedOccurrence | null;
+}
+
+/** A one-off row that replaces occurrence `date` of weekly series `seriesId`. */
+export interface ChangedOccurrence {
+  seriesId: string;
+  date: GameDate;
 }
 
 /** The stored series, for the edit form. */
@@ -38,13 +46,14 @@ export interface ScheduleSeriesView {
   questId: string | null;
   repeat: { weekdays: number[]; until: GameDate | null } | null;
   skip: GameDate[];
+  changed: ChangedOccurrence | null;
 }
 
 /** A schedule without an end time blocks an hour of the day's capacity. */
 export const DEFAULT_SCHEDULE_MINUTES = 60;
 
 const COLUMNS =
-  "id, title, starts_at, ends_at, all_day, location, quest_id, repeat_weekdays, repeat_until, skip_dates, quests (id, title)";
+  "id, title, starts_at, ends_at, all_day, location, quest_id, repeat_weekdays, repeat_until, skip_dates, series_id, occurrence_date, quests (id, title)";
 
 type Row = {
   id: string;
@@ -57,6 +66,8 @@ type Row = {
   repeat_weekdays: number[] | null;
   repeat_until: string | null;
   skip_dates: string[];
+  series_id: string | null;
+  occurrence_date: string | null;
   quests: { id: string; title: string } | null;
 };
 
@@ -73,7 +84,14 @@ function toSeries(row: Row, tz: string): ScheduleSeriesView {
     questId: row.quest_id,
     repeat: row.repeat_weekdays ? { weekdays: row.repeat_weekdays, until: row.repeat_until } : null,
     skip: row.skip_dates,
+    changed: changedOf(row),
   };
+}
+
+function changedOf(row: Row): ChangedOccurrence | null {
+  return row.series_id && row.occurrence_date
+    ? { seriesId: row.series_id, date: row.occurrence_date }
+    : null;
 }
 
 /**
@@ -134,6 +152,7 @@ export async function listSchedules(
         quest: row.quests,
         minutes,
         repeat: series.repeat,
+        changed: series.changed,
       });
     }
   }

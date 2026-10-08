@@ -369,6 +369,34 @@ test.describe("desktop personas", () => {
     await expect(visible(page).getByRole("region", { name: /오늘/ })).toContainText("매일");
     await visible(page).getByRole("link", { name: "데일리 스탠드업" }).click();
     await expect(visible(page).getByText(/매일 반복 일정이에요/)).toBeVisible();
+
+    // The A사 call ran long: move only today's standup, then put it back.
+    await visible(page)
+      .getByRole("link", { name: /회차만$/ })
+      .click();
+    await expect(page).toHaveURL(/scope=one/);
+    await expect(visible(page).getByText(/회차만 바꿔요/)).toBeVisible();
+    await visible(page).getByLabel("시작").fill("10:15");
+    await visible(page).getByLabel("끝 (선택)").fill("10:30");
+    await visible(page).getByRole("button", { name: "이번 회차 저장" }).click();
+    await expect(page).toHaveURL(/saved=1/);
+    const today = visible(page).getByRole("region", { name: /오늘/ });
+    await expect(today).toContainText("이번 회차만 변경");
+    await expect(today).toContainText("10:15");
+    await expect(today).not.toContainText("08:45");
+    await j.capture("standup-moved");
+    // Next week keeps the usual time.
+    await visible(page).getByRole("link", { name: "다음 주" }).click();
+    await expect(visible(page).getByRole("region", { name: /^\d+월 \d+일 \(.\)$/ })).toContainText(
+      "08:45",
+    );
+
+    await page.goto("/calendar");
+    await visible(page).getByRole("link", { name: "데일리 스탠드업" }).click();
+    await expect(visible(page).getByText(/회차만 바꾼 일정이에요/)).toBeVisible();
+    await visible(page).getByRole("button", { name: "원래 일정으로 되돌리기" }).click();
+    await expect(visible(page).getByText("원래 일정으로 되돌렸어요.")).toBeVisible();
+    await expect(visible(page).getByRole("region", { name: /오늘/ })).toContainText("08:45");
   });
 
   test("P5 하늘 — keyboard and screen reader, eight daily routines", async ({ browser }) => {

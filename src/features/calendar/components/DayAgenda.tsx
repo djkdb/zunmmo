@@ -126,6 +126,11 @@ export function DayAgenda({
                           {describeRecurrence(s.repeat.weekdays, s.repeat.until)}
                         </span>
                       )}
+                      {s.changed && (
+                        <span className="text-caption text-text-muted">
+                          반복 일정 · 이번 회차만 변경
+                        </span>
+                      )}
                       {s.location && (
                         <span className="text-caption text-text-muted">{s.location}</span>
                       )}

@@ -36,6 +36,7 @@ const schedule = (o: Partial<ScheduleView>): ScheduleView => ({
   quest: null,
   minutes: 120,
   repeat: null,
+  changed: null,
   ...o,
   key: `${o.id ?? "s"}:${o.date ?? "2026-10-10"}`,
 });

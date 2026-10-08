@@ -27,13 +27,22 @@ interface ScheduleFormProps {
   quests: ReadonlyArray<{ id: string; title: string }>;
   initial?: ScheduleFormValues;
   submitLabel: string;
+  /** False for a single occurrence (or a changed one): no weekly repeat fieldset. */
+  allowRepeat?: boolean;
 }
 
 /**
  * Fixed-time schedule, one-off or weekly (classes, standing meetings). Times are the player's
  * local wall clock (converted on save); a weekly series keeps that wall time every week.
  */
-export function ScheduleForm({ action, date, quests, initial, submitLabel }: ScheduleFormProps) {
+export function ScheduleForm({
+  action,
+  date,
+  quests,
+  initial,
+  submitLabel,
+  allowRepeat = true,
+}: ScheduleFormProps) {
   const [state, formAction, pending] = useActionState<ScheduleFormState, FormData>(action, null);
   const [allDay, setAllDay] = useState(initial?.allDay ?? false);
   const [repeat, setRepeat] = useState(Boolean(initial?.repeat));
@@ -96,66 +105,68 @@ export function ScheduleForm({ action, date, quests, initial, submitLabel }: Sch
         </div>
       )}
 
-      <fieldset className="flex flex-col gap-3 rounded-sm border border-border p-4">
-        <legend className="sr-only">반복</legend>
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-small font-semibold text-text-secondary">
-          <input
-            type="checkbox"
-            name="repeatWeekly"
-            checked={repeat}
-            onChange={(e) => setRepeat(e.target.checked)}
-            className="size-5 accent-accent"
-          />
-          매주 반복 (수업, 정기 미팅)
-        </label>
-        {repeat && (
-          <>
-            <div className="flex gap-1.5" role="group" aria-label="반복 요일">
-              {WEEKDAYS.map((day) => {
-                const checked = weekdays.includes(day);
-                return (
-                  <label
-                    key={day}
-                    className={cn(
-                      "relative flex size-11 cursor-pointer items-center justify-center rounded-sm border text-small font-semibold",
-                      "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus",
-                      checked
-                        ? "border-accent bg-accent text-on-accent"
-                        : "border-border-strong text-text-muted",
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      name="weekdays"
-                      value={day}
-                      checked={checked}
-                      aria-label={`${weekdayLabel(day)}요일`}
-                      onChange={() =>
-                        setWeekdays((cur) =>
-                          checked ? cur.filter((d) => d !== day) : [...cur, day],
-                        )
-                      }
-                      className="absolute inset-0 cursor-pointer opacity-0"
-                    />
-                    {weekdayLabel(day)}
-                  </label>
-                );
-              })}
-            </div>
-            {fieldError("weekdays") && (
-              <p className="text-caption text-danger-text">{fieldError("weekdays")}</p>
-            )}
-            <TextField
-              label="반복 종료일 (선택)"
-              name="until"
-              type="date"
-              defaultValue={v("until") ?? initial?.repeat?.until ?? undefined}
-              hint="학기 마지막 주처럼 끝나는 날이 있으면 골라 주세요."
-              error={fieldError("until")}
+      {allowRepeat && (
+        <fieldset className="flex flex-col gap-3 rounded-sm border border-border p-4">
+          <legend className="sr-only">반복</legend>
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-small font-semibold text-text-secondary">
+            <input
+              type="checkbox"
+              name="repeatWeekly"
+              checked={repeat}
+              onChange={(e) => setRepeat(e.target.checked)}
+              className="size-5 accent-accent"
             />
-          </>
-        )}
-      </fieldset>
+            매주 반복 (수업, 정기 미팅)
+          </label>
+          {repeat && (
+            <>
+              <div className="flex gap-1.5" role="group" aria-label="반복 요일">
+                {WEEKDAYS.map((day) => {
+                  const checked = weekdays.includes(day);
+                  return (
+                    <label
+                      key={day}
+                      className={cn(
+                        "relative flex size-11 cursor-pointer items-center justify-center rounded-sm border text-small font-semibold",
+                        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus",
+                        checked
+                          ? "border-accent bg-accent text-on-accent"
+                          : "border-border-strong text-text-muted",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        name="weekdays"
+                        value={day}
+                        checked={checked}
+                        aria-label={`${weekdayLabel(day)}요일`}
+                        onChange={() =>
+                          setWeekdays((cur) =>
+                            checked ? cur.filter((d) => d !== day) : [...cur, day],
+                          )
+                        }
+                        className="absolute inset-0 cursor-pointer opacity-0"
+                      />
+                      {weekdayLabel(day)}
+                    </label>
+                  );
+                })}
+              </div>
+              {fieldError("weekdays") && (
+                <p className="text-caption text-danger-text">{fieldError("weekdays")}</p>
+              )}
+              <TextField
+                label="반복 종료일 (선택)"
+                name="until"
+                type="date"
+                defaultValue={v("until") ?? initial?.repeat?.until ?? undefined}
+                hint="학기 마지막 주처럼 끝나는 날이 있으면 골라 주세요."
+                error={fieldError("until")}
+              />
+            </>
+          )}
+        </fieldset>
+      )}
 
       <TextField
         label="장소 (선택)"
