@@ -12,8 +12,8 @@ export const SPRITE_SHEETS = {
       "y": 30
     },
     "sheetSize": {
-      "w": 128,
-      "h": 64
+      "w": 256,
+      "h": 256
     },
     "images": {
       "royal": "/sprites/characters/adventurer-royal.png",
@@ -41,6 +41,80 @@ export const SPRITE_SHEETS = {
           150,
           150,
           150
+        ],
+        "loop": true
+      },
+      "celebrating": {
+        "row": 2,
+        "frames": 6,
+        "durations": [
+          90,
+          90,
+          90,
+          90,
+          120,
+          200
+        ],
+        "loop": false,
+        "next": "idle"
+      },
+      "level-up": {
+        "row": 3,
+        "frames": 8,
+        "durations": [
+          80,
+          80,
+          80,
+          80,
+          80,
+          80,
+          150,
+          300
+        ],
+        "loop": false,
+        "next": "idle"
+      },
+      "sleeping": {
+        "row": 4,
+        "frames": 4,
+        "durations": [
+          400,
+          400,
+          400,
+          400
+        ],
+        "loop": true
+      },
+      "thinking": {
+        "row": 5,
+        "frames": 4,
+        "durations": [
+          250,
+          250,
+          250,
+          250
+        ],
+        "loop": true
+      },
+      "surprised": {
+        "row": 6,
+        "frames": 3,
+        "durations": [
+          80,
+          80,
+          300
+        ],
+        "loop": false,
+        "next": "idle"
+      },
+      "studying": {
+        "row": 7,
+        "frames": 4,
+        "durations": [
+          220,
+          220,
+          220,
+          220
         ],
         "loop": true
       }

@@ -21,6 +21,8 @@ interface SpriteProps {
   frameSize: { readonly w: number; readonly h: number };
   sheetSize: { readonly w: number; readonly h: number };
   animation: SpriteAnimation;
+  /** Played (looping) after a non-looping `animation` ends, e.g. celebrating → idle. */
+  then?: SpriteAnimation;
   /** Integer scale, or "inherit" to follow the `--pixel-scale` CSS variable. */
   scale?: ScaleProp;
   /** Freeze on the first frame. Forced on when the user prefers reduced motion. */
@@ -39,7 +41,8 @@ export function Sprite({
   src,
   frameSize,
   sheetSize,
-  animation,
+  animation: first,
+  then,
   scale = 4,
   paused = false,
   onEnd,
@@ -48,6 +51,8 @@ export function Sprite({
 }: SpriteProps) {
   const reducedMotion = useReducedMotion();
   const [frame, setFrame] = useState(0);
+  const [settled, setSettled] = useState(false);
+  const animation = settled && then ? then : first;
   const onEndRef = useRef(onEnd);
 
   useEffect(() => {
@@ -64,6 +69,10 @@ export function Sprite({
       () => {
         if (isLast && !loop) {
           onEndRef.current?.();
+          if (then) {
+            setSettled(true);
+            setFrame(0);
+          }
           return;
         }
         setFrame((current) => (current + 1) % frames);
@@ -71,7 +80,7 @@ export function Sprite({
       durations[frame] ?? durations[0] ?? 150,
     );
     return () => window.clearTimeout(timer);
-  }, [frame, frames, durations, loop, frozen]);
+  }, [frame, frames, durations, loop, frozen, then]);
 
   const shown = frozen ? 0 : frame;
   const style: CSSProperties = {

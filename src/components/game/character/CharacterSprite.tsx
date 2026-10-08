@@ -84,6 +84,8 @@ export function CharacterSprite({
 }: CharacterSpriteProps) {
   const drawn = resolveCharacterState(state);
   const animation = SHEET.states[drawn];
+  const next =
+    "next" in animation ? SHEET.states[resolveCharacterState(animation.next)] : undefined;
   return (
     <span className={cn("relative inline-flex shrink-0", className)}>
       {shadow && (
@@ -107,6 +109,7 @@ export function CharacterSprite({
         frameSize={SHEET.frameSize}
         sheetSize={SHEET.sheetSize}
         animation={animation}
+        then={next}
         scale={scale}
         paused={paused}
         onEnd={onAnimationEnd}
