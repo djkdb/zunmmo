@@ -69,7 +69,7 @@
 
 ### In Scope
 - **Landing**: 브랜드 + 픽셀 히어로 + 가입 CTA
-- **Auth**: 이메일 Magic Link + Google OAuth (Supabase Auth)
+- **Auth**: 이메일 OTP(6자리 코드 + 매직 링크) + Google OAuth(옵션) (Supabase Auth)
 - **Onboarding**: 캐릭터 이름/외형(프리셋 4종) 선택 → 첫 퀘스트 3개를 템플릿에서 선택
 - **Dashboard ("Adventure")**: Character / Level / XP / Today's Adventure / Main / Daily / Side / Boss / 퀘스트 추가 / Recent Progress
 - **Quest Engine**: CRUD, 타입·난이도·마감·반복 규칙, 완료/완료취소

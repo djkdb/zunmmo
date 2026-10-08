@@ -12,6 +12,8 @@ type PixelFrameProps<T extends ElementType> = {
   stripe?: QuestType;
   /** Drop the hard shadow (for nested or dense frames). */
   flat?: boolean;
+  /** Accent outline for the chosen option in a radio-card group. */
+  selected?: boolean;
 } & Omit<ComponentPropsWithoutRef<T>, "as">;
 
 /**
@@ -23,6 +25,7 @@ export function PixelFrame<T extends ElementType = "div">({
   variant = "surface",
   stripe,
   flat,
+  selected,
   className,
   ...props
 }: PixelFrameProps<T>) {
@@ -33,6 +36,7 @@ export function PixelFrame<T extends ElementType = "div">({
       data-variant={variant === "surface" ? undefined : variant}
       data-stripe={stripe}
       data-flat={flat ? "" : undefined}
+      data-selected={selected ? "" : undefined}
       {...props}
     />
   );

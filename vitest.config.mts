@@ -6,7 +6,9 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
     environment: "node",
-    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.ts", "supabase/tests/**/*.test.ts"],
+    // DB suites share one local database; run files serially to keep them independent.
+    fileParallelism: false,
     coverage: { include: ["src/lib/game/**"] },
   },
 });

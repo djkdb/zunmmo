@@ -70,6 +70,14 @@
     color: var(--color-ink-950);
   }
 
+  /* Selected option (radio cards): accent outline. A focused radio right before it wins. */
+  .pixel-frame[data-selected] {
+    --pf-outline: var(--color-accent);
+  }
+  .peer:focus-visible + .pixel-frame {
+    --pf-outline: var(--color-focus);
+  }
+
   .pixel-frame[data-flat] {
     --pf-drop: 0 0 transparent;
   }

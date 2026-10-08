@@ -114,9 +114,17 @@ adventure/actions.ts → queries (활성 퀘스트, 최근 완료, 오늘 일정
 
 ## 4. 인증 & 라우팅
 
-- `middleware.ts`: Supabase 세션 쿠키 갱신, `(game)` 그룹 미인증 접근 시 `/login?next=…`로 리다이렉트.
-- 로그인 후 기본 진입: `/adventure`. 캐릭터 미생성 시 `/onboarding`.
+- `src/proxy.ts` (Next 16에서 middleware → proxy로 이름 변경): 모든 요청에서 Supabase 세션 쿠키 갱신, 보호 경로 미인증 시 `/login?next=…`, 로그인 상태로 `/login` 접근 시 `/adventure`. 리다이렉트 응답에도 갱신된 쿠키를 복사한다.
+- **로그인 = 이메일 OTP**: 한 통의 메일에 6자리 코드 + 매직 링크(`/auth/confirm?token_hash=…`). 코드는 설치형 PWA에서도 동작한다 (매직 링크는 다른 브라우저 컨텍스트로 열려 PWA 세션이 안 생김). 템플릿: `supabase/templates/sign-in.html`. Google OAuth는 `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED=true`일 때만 노출 (`/auth/callback`).
+- `next` 파라미터는 `safeNextPath()`로 같은 출처의 상대 경로만 허용 (open redirect 방지).
+- 로그인 후 기본 진입: `/adventure`. 캐릭터 미생성 시 `/onboarding` (`requireCharacter()`).
 - 서버에서 사용자 확인은 항상 `getUser()`(토큰 검증) 사용. `getSession()` 결과를 신뢰해 권한 판단하지 않는다.
+
+### 4.1 Cache Components와 세션 (Next 16)
+- 세션을 읽는 컴포넌트는 **반드시 `<Suspense>` 안**에 둔다 (밖에서 `cookies()`를 읽으면 빌드 오류). 페이지는 정적 셸(제목·내비)을 즉시 보여 주고 플레이어 데이터는 스트리밍된다 → 빌드 결과 `◐ Partial Prerender`.
+- `createClient()`(서버)는 `await connection()`으로 시작한다. Supabase Auth가 토큰 만료를 현재 시각으로 비교하는데, Cache Components는 요청에 묶이기 전의 `Date.now()`를 금지하기 때문.
+- 데이터 접근은 `src/features/player/queries.ts`의 `getPlayer()`(React `cache`로 요청당 1회) — DAL 패턴.
+- Next는 이전 라우트를 숨긴 채 유지한다(React Activity). E2E 선택자는 `filter({ visible: true })`로 보이는 요소만 대상으로 한다.
 
 ## 5. Database Schema
 
@@ -268,8 +276,8 @@ user_achievements (
 | 레이어 | 도구 | 범위 |
 |--------|------|------|
 | `lib/game` | Vitest | 100% 브랜치 커버리지 목표 (규칙이 곧 제품) |
-| RPC/RLS | Supabase local + SQL 테스트 (pgTAP 또는 Vitest+supabase-js) | 이중 완료, 타인 데이터 접근 거부, reversal |
-| UI | Playwright | 가입→캐릭터 생성→퀘스트 생성→완료→XP 반영 smoke |
+| RPC/RLS | Vitest + `pg` (`supabase/tests`) — 실제 `authenticated`/`anon` 역할 + JWT claims로 실행 | 이중 완료, 타인 데이터 접근 거부, 컬럼 권한, reversal. 로컬 DB가 없으면 skip |
+| UI | Playwright (`e2e/`) — 로그인 코드는 Mailpit API에서 읽음 | 가입→캐릭터 생성→퀘스트→완료→XP smoke, axe(WCAG 2.1 AA) 전 화면. `E2E_PROD=1`이면 `next start`로 실행 |
 | 시각 | Playwright 스크린샷 (Phase 8) | 픽셀 컴포넌트 회귀 |
 
 CI(GitHub Actions): `typecheck` → `lint` → `test` → `build`. Vercel Preview 배포.
@@ -278,11 +286,12 @@ CI(GitHub Actions): `typecheck` → `lint` → `test` → `build`. Vercel Previe
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=     # (또는 publishable key)
-SUPABASE_SERVICE_ROLE_KEY=         # 서버 전용, 마이그레이션/관리 스크립트만. 요청 경로에서 사용 금지
-NEXT_PUBLIC_SITE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=  # publishable key (구 anon key). 클라이언트 노출 OK — 권한은 RLS가 결정
+NEXT_PUBLIC_SITE_URL=                  # 메일 링크/OAuth 리다이렉트 기준 URL
+NEXT_PUBLIC_AUTH_GOOGLE_ENABLED=false  # Supabase에 Google provider를 설정했을 때만 true
+SUPABASE_SERVICE_ROLE_KEY=             # (앱에서 사용하지 않음) 관리 스크립트 전용. 요청 경로에서 사용 금지
 ```
-- `.env.example`만 커밋. `NEXT_PUBLIC_` 접두사가 없는 키는 클라이언트 번들에 들어가지 않도록 `server-only` 모듈에서만 import.
+- `.env.example`만 커밋 (로컬 기본값 포함), `.env.local`은 git 제외. 공개 env는 `src/lib/supabase/env.ts`에서 Zod로 검증해 누락 시 즉시 실패. `NEXT_PUBLIC_` 접두사가 없는 키는 클라이언트 번들에 들어가지 않도록 `server-only` 모듈에서만 import.
 
 ## 9. 성능 예산
 

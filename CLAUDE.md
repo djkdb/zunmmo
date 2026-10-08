@@ -39,8 +39,13 @@ pnpm build          # next build
 pnpm format         # prettier
 pnpm art:build      # /art 원본 → PNG 시트 + 타입 매니페스트 + 파비콘 (생성 파일은 손으로 고치지 않음)
 pnpm art:check      # 배포 PNG의 LIFE-32 팔레트/알파 검사
+pnpm db:start       # 로컬 Supabase (Docker) — Postgres :54322, API :54321, Mailpit :54324
+pnpm db:reset       # 마이그레이션 재적용
+pnpm db:types       # DB 타입 생성 → src/lib/supabase/database.types.ts (마이그레이션 후 필수)
+pnpm test:e2e       # Playwright (로컬 DB 필요). E2E_PROD=1 → 프로덕션 빌드로 실행
 ```
-커밋/푸시 전 `pnpm typecheck && pnpm lint && pnpm test`가 통과해야 한다.
+커밋/푸시 전 `pnpm typecheck && pnpm lint && pnpm test`가 통과해야 한다. 화면/플로우를 바꿨다면 `pnpm test:e2e`도.
+처음 실행: `cp .env.example .env.local && pnpm db:start`.
 
 **Next.js 16.4**는 학습 데이터보다 새 버전이다 (Cache Components 기본, Turbopack, 비동기 request API). Next API를 쓰기 전에 `node_modules/next/dist/docs/`의 해당 가이드를 먼저 읽는다 (`AGENTS.md`).
 

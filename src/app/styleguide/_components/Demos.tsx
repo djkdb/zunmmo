@@ -107,10 +107,7 @@ export function CharacterDemo() {
               onChange={() => setOutfit(preset)}
               className="peer sr-only"
             />
-            <PixelFrame
-              flat
-              className="p-1 peer-checked:[--pf-outline:var(--color-accent)] peer-focus-visible:[--pf-outline:var(--color-focus)]"
-            >
+            <PixelFrame flat selected={outfit === preset} className="p-1">
               <CharacterSprite outfit={preset} scale={2} label={`${preset} 외형`} shadow={false} />
             </PixelFrame>
             <span className="text-caption text-text-muted">{preset}</span>

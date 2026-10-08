@@ -56,13 +56,14 @@
 
 **Exit** (통과): 390px·1280px 가로 스크롤 없음, 콘솔 오류 0, axe(WCAG 2.1 AA) 위반 0
 
-## Phase 3 — Auth + Character
-- Supabase 프로젝트, 마이그레이션 `profiles`/`characters`/`character_stats`, RLS
-- Magic link + Google OAuth, `middleware.ts` 보호 라우트
-- 온보딩: 이름 → 외형 프리셋(4종) → 완료 → `/adventure`
-- AppShell: 모바일 하단 내비 / 데스크톱 사이드 내비
+## Phase 3 — Auth + Character ✅
+- [x] 로컬 Supabase(Docker) + 마이그레이션 `profiles`/`characters`/`character_stats`, `create_character` RPC, RLS·컬럼 권한
+- [x] 이메일 OTP 로그인 (6자리 코드 + 매직 링크 한 통), Google OAuth(옵션), `proxy.ts` 세션 갱신·보호 경로
+- [x] 온보딩: 이름 + 외형 프리셋 4종 → `/adventure`
+- [x] AppShell: 모바일 하단 내비(가운데 퀘스트 추가) / 데스크톱 사이드 내비, 설정(로그아웃)
+- [x] DB 테스트(실제 역할·JWT로 RLS 검증) 7개, E2E(가입→캐릭터→모험→로그아웃, 잘못된 코드, 로그인 페이지 우회), axe
 
-**Exit**: 신규 가입 → 캐릭터 생성 e2e 통과, 타 사용자 데이터 접근 불가 테스트
+**Exit** (통과): E2E 10/10 — dev와 프로덕션 빌드(`E2E_PROD=1`) 모두, 타 사용자 데이터 접근 불가·XP 직접 쓰기 불가 테스트 통과
 
 ## Phase 4 — Quest Engine
 - `goals`, `quests`, `quest_completions` 마이그레이션 + RLS
