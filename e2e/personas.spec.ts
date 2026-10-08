@@ -204,6 +204,11 @@ test.describe("mobile personas", () => {
     await panel.getByRole("button", { name: "오늘의 모험에 담기: 치과 예약" }).click();
     await expect(panel.getByRole("link", { name: "치과 예약" })).toBeVisible();
     await j.capture("plan-edited");
+    // Asking for a new plan does not bring back what they just took out.
+    await panel.getByRole("button", { name: "다시 추천받기" }).click();
+    await expect(panel.getByRole("list", { name: "오늘의 모험 퀘스트" })).toBeVisible();
+    await expect(panel.getByRole("link", { name: "책 20쪽 읽기" })).toBeVisible();
+    await expect(panel.getByRole("link", { name: "헬스장 가기" })).toHaveCount(0);
 
     // The 2-hour step becomes three steps the day can hold (GAME_MASTER §7).
     await page.goto("/quests");

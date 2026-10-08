@@ -93,7 +93,17 @@ export interface RecommendInput {
   today: GameDate;
   /** Defaults to "normal"; see `adventurePace`. */
   pace?: AdventurePace;
+  /** Quests the player took out of recent plans (×), by game day. */
+  removals?: ReadonlyArray<{ date: GameDate; questIds: readonly string[] }>;
 }
+
+/**
+ * A quest the player takes out of the plan (×) rests: a habit for the rest of that day, a
+ * one-off quest for that day and this many more — unless it is due by tomorrow. It stays
+ * addable meanwhile. Without this the GM offered the same removed quest every day
+ * (docs/SIMULATION.md).
+ */
+export const SNOOZE_DAYS = 2;
 
 export type PickReason = "boss" | "prep" | "deadline" | "daily" | "questline" | "balance" | "open";
 
@@ -116,7 +126,10 @@ export interface Recommendation {
   /** Minutes the plan was filled against (capacity, or the light-pace budget). */
   budget: number;
   pace: AdventurePace;
-  /** The best quest left out only because it is longer than today's budget — "쪼개 볼까?". */
+  /**
+   * The best important quest left out because it is longer than today's budget, or than the
+   * room today's habits leave — "쪼개 볼까?".
+   */
   tooBig: RecommendedQuest | null;
 }
 
@@ -266,8 +279,14 @@ export function scoreQuest(
   return { score: Math.round(score * 1000) / 1000, reason };
 }
 
-/** Reasons worth a "split it" hint when the quest cannot fit today; a long movie is not one. */
+/**
+ * Worth a "split it" hint when the quest cannot fit today: a questline step, boss prep, or
+ * anything with a deadline — a retried 90-minute quest must not wait silently until D-1
+ * (docs/SIMULATION.md). A long movie with no date is not one.
+ */
 const IMPORTANT: ReadonlySet<PickReason> = new Set(["questline", "prep", "deadline"]);
+const worthSplitting = (c: RecommendedQuest, quest: RecommendQuest) =>
+  IMPORTANT.has(c.reason) || (quest.deadline !== null && quest.type !== "boss");
 
 export function recommendToday(input: RecommendInput): Recommendation {
   const pace = input.pace ?? "normal";
@@ -327,13 +346,36 @@ export function recommendToday(input: RecommendInput): Recommendation {
   // must not lose the same two every day (docs/SIMULATION.md). Light days cap everything.
   const isHabit = (c: RecommendedQuest) => byId.get(c.questId)!.type === "daily";
   let oneOffs = picks.length;
+  // Every-day habits come back tomorrow too, so a dated quest that never fits beside them never
+  // fits. Weekly-count habits (gym 3×) can move, so they don't count.
+  const everyDay = (c: RecommendedQuest) => byId.get(c.questId)!.repeat?.freq === "daily";
+  const habitMinutes = light
+    ? 0
+    : candidates.filter(everyDay).reduce((sum, c) => sum + c.minutes, 0);
+  const roomBesideHabits = Math.max(fillBudget - habitMinutes, GAP_MINUTES);
+  const removedOn = new Map<string, GameDate>();
+  for (const r of input.removals ?? []) {
+    for (const id of r.questIds) if ((removedOn.get(id) ?? "") < r.date) removedOn.set(id, r.date);
+  }
+  const resting = (c: RecommendedQuest) => {
+    const when = removedOn.get(c.questId);
+    if (!when) return false;
+    const ago = daysBetween(when, input.today);
+    const q = byId.get(c.questId)!;
+    if (ago < 0) return false;
+    if (q.type === "daily") return ago === 0;
+    if (ago > SNOOZE_DAYS) return false;
+    return !q.deadline || daysBetween(input.today, q.deadline) > 1;
+  };
   for (const c of candidates) {
     if (picks.length >= MAX_PLAN_SIZE) break;
     if (light && picks.length >= Math.max(maxPicks, forced.length)) break;
     if (picks.includes(c)) continue;
+    if (resting(c)) continue;
     if (!light && !isHabit(c) && oneOffs >= Math.max(maxPicks, forced.length)) continue;
     if (filled + c.minutes > fillBudget) {
-      if (!tooBig && c.minutes > fillBudget && IMPORTANT.has(c.reason)) tooBig = c;
+      const tooLong = c.minutes > Math.min(fillBudget, roomBesideHabits);
+      if (!tooBig && tooLong && worthSplitting(c, byId.get(c.questId)!)) tooBig = c;
       continue;
     }
     picks.push(c);
@@ -341,7 +383,7 @@ export function recommendToday(input: RecommendInput): Recommendation {
     if (!isHabit(c)) oneOffs += 1;
   }
   if (picks.length === 0 && candidates.length > 0) {
-    picks.push(candidates[0]!);
+    picks.push(candidates.find((c) => !resting(c)) ?? candidates[0]!);
     tooBig = null;
   }
 

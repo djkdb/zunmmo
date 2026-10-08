@@ -13,6 +13,7 @@ import {
   eligibleQuests,
   questMinutes,
   recommendToday,
+  SNOOZE_DAYS,
   statNeglect,
   urgency,
 } from "../recommend";
@@ -310,6 +311,61 @@ describe("persona-driven rules", () => {
 
     const onlyMovie = recommendToday(input([reading, movie], { capacityMinutes: 90 }));
     expect(onlyMovie.tooBig).toBeNull();
+  });
+
+  it("names a dated quest that never fits beside today's habits (P3 retry)", () => {
+    // A week away, so the deadline is not its top reason; 90 minutes fit the 120-minute day,
+    // but never next to the 50 minutes of habits that come first every day.
+    const folio = quest({ deadline: "2026-10-15", estimatedMinutes: 90, primaryStat: "cre" });
+    const yoga = quest({ type: "daily", repeat: { freq: "daily" }, estimatedMinutes: 20 });
+    const walk = quest({ type: "daily", repeat: { freq: "daily" }, estimatedMinutes: 30 });
+    const result = recommendToday(
+      input([folio, yoga, walk], {
+        capacityMinutes: 120,
+        statXpLast7Days: { ...NO_STATS, vit: 100 },
+      }),
+    );
+    expect(result.picks.map((p) => p.questId)).toEqual([yoga.id, walk.id]);
+    expect(result.tooBig?.questId).toBe(folio.id);
+    // An undated one-off of the same size is not nagged about.
+    const undated = recommendToday(
+      input([{ ...folio, deadline: null }, yoga, walk], { capacityMinutes: 120 }),
+    );
+    expect(undated.tooBig).toBeNull();
+  });
+});
+
+describe("resting removed quests", () => {
+  const club = quest({ id: "club", estimatedMinutes: 15 });
+  const other = quest({ id: "other", estimatedMinutes: 15 });
+  const picked = (quests: RecommendQuest[], removedOn: string, today = TODAY) =>
+    recommendToday(
+      input(quests, { today, removals: [{ date: removedOn, questIds: ["club", "vocab"] }] }),
+    ).picks.map((p) => p.questId);
+
+  it("rests a removed one-off quest for the day and two more, then offers it again", () => {
+    expect(picked([club, other], TODAY)).toEqual(["other"]);
+    expect(picked([club, other], "2026-10-06")).toEqual(["other"]);
+    expect(picked([club, other], "2026-10-05")).toContain("club");
+    expect(SNOOZE_DAYS).toBe(2);
+  });
+
+  it("keeps it addable, and offers it anyway when it is due by tomorrow", () => {
+    const result = recommendToday(
+      input([club, other], { removals: [{ date: TODAY, questIds: ["club"] }] }),
+    );
+    expect(result.candidates.map((c) => c.questId)).toContain("club");
+    expect(picked([{ ...club, deadline: "2026-10-09" }, other], TODAY)).toContain("club");
+  });
+
+  it("rests a removed habit only for the rest of that day", () => {
+    const vocab = quest({ id: "vocab", type: "daily", repeat: { freq: "daily" } });
+    expect(picked([vocab, other], TODAY)).toEqual(["other"]);
+    expect(picked([vocab, other], "2026-10-07")).toContain("vocab");
+  });
+
+  it("still offers a resting quest when nothing else is left", () => {
+    expect(picked([club], TODAY)).toEqual(["club"]);
   });
 });
 

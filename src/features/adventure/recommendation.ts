@@ -17,6 +17,7 @@ import {
   type RecommendQuest,
   addDays,
   NIGHT_OWL_NIGHTS,
+  SNOOZE_DAYS,
   adventurePace,
   briefing,
   currentStreak,
@@ -26,6 +27,8 @@ import {
   recommendToday,
 } from "@/lib/game";
 import { toLocal } from "@/lib/utils/zoned";
+
+import { listRecentRemovals } from "./queries";
 
 export function toRecommendQuest(q: QuestView): RecommendQuest {
   return {
@@ -74,14 +77,16 @@ export async function planToday(
     completions: CompletionLog[];
   }> = {},
 ): Promise<TodayPlan> {
-  const [quests, questlines, completions, statXp, schedules, playDates] = await Promise.all([
-    loaded.quests ?? listQuests(today),
-    loaded.questlines ?? listQuestlines(today),
-    loaded.completions ?? listCompletionsSince(completionWindowStart(today)),
-    statXpSince(addDays(today, -6)),
-    listSchedules(player, today, today),
-    listPlayDates(),
-  ]);
+  const [quests, questlines, completions, statXp, schedules, playDates, removals] =
+    await Promise.all([
+      loaded.quests ?? listQuests(today),
+      loaded.questlines ?? listQuestlines(today),
+      loaded.completions ?? listCompletionsSince(completionWindowStart(today)),
+      statXpSince(addDays(today, -6)),
+      listSchedules(player, today, today),
+      listPlayDates(),
+      listRecentRemovals(addDays(today, -SNOOZE_DAYS)),
+    ]);
   const tz = player.profile.timezone;
   const dayStartHour = player.profile.dayStartHour;
   const localHour = Number(toLocal(new Date(), tz).time.slice(0, 2));
@@ -109,6 +114,7 @@ export async function planToday(
     capacityMinutes: player.profile.dailyCapacityMin,
     today,
     pace: adventurePace({ today, localHour, dayStartHour, lastPlayedDate }),
+    removals,
   });
 
   const boss =

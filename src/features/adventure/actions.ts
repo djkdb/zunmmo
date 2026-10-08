@@ -46,17 +46,21 @@ export async function startAdventure(): Promise<void> {
 async function savePicks(
   today: string,
   questIds: string[],
+  removedQuestIds: string[],
 ): Promise<Result<{ questIds: string[] }>> {
   const supabase = await createClient();
   const { error } = await supabase
     .from("adventures")
-    .update({ quest_ids: questIds, source: "custom" })
+    .update({ quest_ids: questIds, removed_quest_ids: removedQuestIds, source: "custom" })
     .eq("game_date", today);
   if (error) return fail(codeFromDbError(error));
   return ok({ questIds });
 }
 
-/** Take a quest out of today's adventure (it stays on the board). */
+/**
+ * Take a quest out of today's adventure (it stays on the board). The GM remembers, and rests
+ * a one-off quest for a couple of days instead of offering it again tomorrow (SNOOZE_DAYS).
+ */
 export async function removeFromAdventure(
   questId: string,
 ): Promise<Result<{ questIds: string[] }>> {
@@ -69,6 +73,7 @@ export async function removeFromAdventure(
   return savePicks(
     today,
     adventure.questIds.filter((id) => id !== questId),
+    [...new Set([...adventure.removedQuestIds, questId])],
   );
 }
 
@@ -83,5 +88,9 @@ export async function addToAdventure(questId: string): Promise<Result<{ questIds
   const { recommendation } = await planToday(player, today);
   if (!recommendation.candidates.some((c) => c.questId === questId))
     return fail("QUEST_NOT_ELIGIBLE");
-  return savePicks(today, [...adventure.questIds, questId]);
+  return savePicks(
+    today,
+    [...adventure.questIds, questId],
+    adventure.removedQuestIds.filter((id) => id !== questId),
+  );
 }
