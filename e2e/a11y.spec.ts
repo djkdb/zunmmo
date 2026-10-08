@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { startNewGame } from "./helpers";
 
 /** WCAG 2.1 AA via axe on every main screen (CLAUDE.md 접근성). Extend the list as screens ship. */
-const PUBLIC_PAGES = ["/", "/login"];
+const PUBLIC_PAGES = ["/", "/login", "/privacy", "/terms"];
 const PLAYER_PAGES = [
   "/adventure",
   "/quests",
