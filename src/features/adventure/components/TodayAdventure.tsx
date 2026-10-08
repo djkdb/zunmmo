@@ -25,6 +25,8 @@ export interface PlanNotes {
   schedules?: { count: number; minutes: number };
   tooBig?: { id: string; title: string; minutes: number };
   light?: boolean;
+  /** Plays late most nights — suggest moving the day start (settings). */
+  nightOwl?: boolean;
 }
 
 type TodayAdventureProps =
@@ -113,6 +115,20 @@ function Notes({ notes }: { notes: PlanNotes }) {
   if (notes.light) {
     lines.push(
       <li key="light">오늘은 가볍게 1시간 안쪽으로만 골랐어요. 시작한 뒤 더 담을 수 있어요.</li>,
+    );
+  }
+  if (notes.nightOwl) {
+    lines.push(
+      <li key="night-owl">
+        새벽에 자주 모험하네요.{" "}
+        <Link
+          href="/settings"
+          className="font-semibold text-on-parchment underline underline-offset-2"
+        >
+          하루 시작 시각
+        </Link>
+        을 늦추면 새벽도 하루의 한가운데로 쳐서 평소처럼 추천해요.
+      </li>,
     );
   }
   if (notes.tooBig) {
@@ -244,7 +260,7 @@ function Active({
           </summary>
           {full ? (
             <p className="text-small text-on-parchment-muted">
-              6개까지 담을 수 있어요. 하나를 빼면 더 담을 수 있어요.
+              12개까지 담을 수 있어요. 하나를 빼면 더 담을 수 있어요.
             </p>
           ) : (
             <ul className="mt-2 flex flex-col">

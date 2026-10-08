@@ -12,7 +12,7 @@ export const ERROR_MESSAGES = {
   ALREADY_COMPLETED: "이미 완료한 퀘스트예요.",
   UNDO_WINDOW_PASSED: "오늘 완료한 퀘스트만 되돌릴 수 있어요.",
   ADVENTURE_NOT_STARTED: "오늘의 모험을 먼저 시작해 주세요.",
-  ADVENTURE_FULL: "오늘의 모험에는 6개까지 담을 수 있어요.",
+  ADVENTURE_FULL: "오늘의 모험에는 12개까지 담을 수 있어요.",
   ADVENTURE_LAST_PICK: "마지막 퀘스트는 뺄 수 없어요. 다시 추천받기를 눌러 보세요.",
   QUEST_NOT_ELIGIBLE: "오늘 할 수 있는 퀘스트가 아니에요.",
   QUEST_NOT_SPLITTABLE: "진행 중인 메인·사이드 퀘스트만 나눌 수 있어요.",

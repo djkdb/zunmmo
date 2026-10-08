@@ -60,6 +60,8 @@ export async function getUnlockedAchievements(): Promise<Map<string, string>> {
 export interface CompletionLog {
   questId: string;
   occurrenceDate: GameDate;
+  /** When it was played (ISO instant) — night-owl detection. */
+  completedAt?: string;
 }
 
 /** Completions since `from` (inclusive) — today's dailies and this week's habit counts. */
@@ -67,10 +69,14 @@ export async function listCompletionsSince(from: GameDate): Promise<CompletionLo
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("quest_completions")
-    .select("quest_id, occurrence_date")
+    .select("quest_id, occurrence_date, completed_at")
     .gte("occurrence_date", from);
   if (error) throw error;
-  return data.map((r) => ({ questId: r.quest_id, occurrenceDate: r.occurrence_date }));
+  return data.map((r) => ({
+    questId: r.quest_id,
+    occurrenceDate: r.occurrence_date,
+    completedAt: r.completed_at,
+  }));
 }
 
 export interface XpLogView {

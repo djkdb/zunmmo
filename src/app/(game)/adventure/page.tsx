@@ -20,7 +20,7 @@ import { getAdventure } from "@/features/adventure/queries";
 import { completionWindowStart, planToday } from "@/features/adventure/recommendation";
 import { SectionHeader } from "@/features/adventure/components/SectionHeader";
 import { type PlayerWithCharacter, playerToday, requireCharacter } from "@/features/player/queries";
-import { type GameDate, MAX_PICKS, bossReadiness } from "@/lib/game";
+import { type GameDate, MAX_PLAN_SIZE, bossReadiness } from "@/lib/game";
 import { formatGameDate } from "@/lib/utils/format";
 import { RecentXpList } from "@/features/progress/components/RecentXpList";
 import {
@@ -280,7 +280,7 @@ async function todayPanel(
           .filter((c) => !inPlan.has(c.questId) && byId.has(c.questId))
           .slice(0, MAX_EXTRAS)
           .map((c) => ({ quest: byId.get(c.questId)!, minutes: c.minutes })),
-        full: steps.length >= MAX_PICKS,
+        full: steps.length >= MAX_PLAN_SIZE,
       },
       mood: adventureMood(steps.find((s) => !s.done)?.quest, today),
     };
@@ -308,6 +308,7 @@ async function todayPanel(
       notes: {
         schedules: plan.schedules,
         light: recommendation.pace !== "normal",
+        nightOwl: recommendation.pace === "night" && plan.nightOwl,
         tooBig: tooBig
           ? { id: tooBig.id, title: tooBig.title, minutes: recommendation.tooBig!.minutes }
           : undefined,

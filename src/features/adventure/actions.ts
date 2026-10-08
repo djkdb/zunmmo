@@ -6,7 +6,7 @@ import { playerToday, requireCharacter } from "@/features/player/queries";
 import { listCompletionsSince } from "@/features/progress/queries";
 import { listQuests } from "@/features/quests/queries";
 import { type Result, codeFromDbError, fail, ok } from "@/lib/errors";
-import { MAX_PICKS } from "@/lib/game";
+import { MAX_PLAN_SIZE } from "@/lib/game";
 import { createClient } from "@/lib/supabase/server";
 
 import { getAdventure } from "./queries";
@@ -79,7 +79,7 @@ export async function addToAdventure(questId: string): Promise<Result<{ questIds
   const adventure = await getAdventure(today);
   if (!adventure) return fail("ADVENTURE_NOT_STARTED");
   if (adventure.questIds.includes(questId)) return ok({ questIds: adventure.questIds });
-  if (adventure.questIds.length >= MAX_PICKS) return fail("ADVENTURE_FULL");
+  if (adventure.questIds.length >= MAX_PLAN_SIZE) return fail("ADVENTURE_FULL");
   const { recommendation } = await planToday(player, today);
   if (!recommendation.candidates.some((c) => c.questId === questId))
     return fail("QUEST_NOT_ELIGIBLE");

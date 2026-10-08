@@ -16,10 +16,12 @@ import {
   type Recommendation,
   type RecommendQuest,
   addDays,
+  NIGHT_OWL_NIGHTS,
   adventurePace,
   briefing,
   currentStreak,
   daysBetween,
+  isLateNight,
   isoWeekStart,
   recommendToday,
 } from "@/lib/game";
@@ -54,6 +56,8 @@ export interface TodayPlan {
   briefing: Briefing;
   /** Fixed schedules today, so the panel can say what the plan already accounts for. */
   schedules: { count: number; minutes: number };
+  /** Plays late at night often enough that a later day start would suit them. */
+  nightOwl: boolean;
 }
 
 /**
@@ -78,7 +82,19 @@ export async function planToday(
     listSchedules(player, today, today),
     listPlayDates(),
   ]);
-  const localHour = Number(toLocal(new Date(), player.profile.timezone).time.slice(0, 2));
+  const tz = player.profile.timezone;
+  const dayStartHour = player.profile.dayStartHour;
+  const localHour = Number(toLocal(new Date(), tz).time.slice(0, 2));
+  const nightsLastWeek = new Set(
+    completions
+      .filter(
+        (c) =>
+          c.completedAt &&
+          c.occurrenceDate >= addDays(today, -6) &&
+          isLateNight(Number(toLocal(new Date(c.completedAt), tz).time.slice(0, 2)), dayStartHour),
+      )
+      .map((c) => c.occurrenceDate),
+  ).size;
   const lastPlayedDate = playDates.at(-1) ?? null;
   const scheduledMinutes = schedules.reduce((sum, s) => sum + s.minutes, 0);
 
@@ -92,7 +108,7 @@ export async function planToday(
     scheduledMinutes,
     capacityMinutes: player.profile.dailyCapacityMin,
     today,
-    pace: adventurePace({ today, localHour, lastPlayedDate }),
+    pace: adventurePace({ today, localHour, dayStartHour, lastPlayedDate }),
   });
 
   const boss =
@@ -111,6 +127,7 @@ export async function planToday(
     briefing: briefing({
       today,
       localHour,
+      dayStartHour,
       completedToday: completions.filter((c) => c.occurrenceDate === today).length,
       boss: boss ? { title: boss.title, deadline: boss.deadline! } : null,
       adventureStreak: currentStreak(playDates, today),
@@ -119,5 +136,6 @@ export async function planToday(
       pickCount: recommendation.picks.length,
     }),
     schedules: { count: schedules.filter((s) => !s.allDay).length, minutes: scheduledMinutes },
+    nightOwl: nightsLastWeek >= NIGHT_OWL_NIGHTS,
   };
 }
