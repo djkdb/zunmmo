@@ -1,0 +1,36 @@
+GIMP Palette
+Name: LIFE-32
+Columns: 8
+#
+ 13  10  20	ink-950
+ 34  28  51	ink-800
+ 61  52  89	ink-600
+119 108 153	ink-400
+207 200 230	ink-200
+238 234 248	ink-100
+247 239 217	parchment-100
+230 211 168	parchment-300
+196 164 110	parchment-500
+122  92  53	parchment-700
+ 79  58  34	parchment-900
+138 169 255	royal-300
+ 68 102 214	royal-500
+ 35  52 122	royal-700
+246 210 180	skin-a-light
+224 169 131	skin-a-base
+255 229 143	gold-200
+247 183  51	gold-400
+176 104  24	gold-600
+111 220 152	emerald-300
+ 42 157  94	emerald-500
+ 21  79  51	emerald-700
+106 216 224	teal-300
+ 35 144 159	teal-500
+191 152 255	violet-300
+123  76 209	violet-500
+255 127 127	crimson-300
+201  51  63	crimson-500
+127  29  45	crimson-700
+249 139  60	ember-400
+185 120  90	skin-a-shade
+125  74  54	skin-a-deep
