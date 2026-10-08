@@ -4,13 +4,11 @@ import { useActionState, useState } from "react";
 
 import { CharacterSprite, type OutfitPreset } from "@/components/game/character/CharacterSprite";
 import { PixelButton } from "@/components/pixel/PixelButton";
-import { PixelFrame } from "@/components/pixel/PixelFrame";
 import { PixelIcon } from "@/components/pixel/PixelIcon";
 import { TextField } from "@/components/ui/TextField";
-import { cn } from "@/lib/utils/cn";
 
 import { type CreateCharacterState, createCharacter } from "../actions";
-import { OUTFITS, OUTFIT_LABELS } from "../schemas";
+import { OutfitPicker } from "./OutfitPicker";
 
 export function OnboardingForm({ defaultName }: { defaultName: string }) {
   const [state, action, pending] = useActionState<CreateCharacterState, FormData>(
@@ -46,36 +44,7 @@ export function OnboardingForm({ defaultName }: { defaultName: string }) {
         error={error?.fields?.name}
       />
 
-      <fieldset className="flex flex-col gap-3">
-        <legend className="mb-1 text-small font-semibold text-text-secondary">외형</legend>
-        <div className="grid grid-cols-4 gap-3">
-          {OUTFITS.map((preset) => (
-            <label key={preset} className="flex cursor-pointer flex-col items-center gap-1.5">
-              <input
-                type="radio"
-                name="outfit"
-                value={preset}
-                checked={outfit === preset}
-                onChange={() => setOutfit(preset)}
-                className="peer sr-only"
-              />
-              <PixelFrame
-                flat
-                variant={outfit === preset ? "raised" : "surface"}
-                selected={outfit === preset}
-                className="flex w-full justify-center py-2"
-              >
-                <CharacterSprite outfit={preset} scale={2} label="" shadow={false} />
-              </PixelFrame>
-              <span
-                className={cn("text-caption", outfit === preset ? "text-text" : "text-text-muted")}
-              >
-                {OUTFIT_LABELS[preset]}
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <OutfitPicker value={outfit} onChange={setOutfit} />
 
       {error && !error.fields && (
         <p role="alert" className="text-small text-danger-text">
