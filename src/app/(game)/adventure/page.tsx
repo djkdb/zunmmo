@@ -12,14 +12,17 @@ import { SettingsLink } from "@/components/layout/SettingsLink";
 import { PixelFrame } from "@/components/pixel/PixelFrame";
 import { selectBoard } from "@/features/adventure/board";
 import { AdventureSkeleton } from "@/features/adventure/components/AdventureSkeleton";
+import { type AdventureStep, TodayAdventure } from "@/features/adventure/components/TodayAdventure";
+import { getAdventure } from "@/features/adventure/queries";
+import { completionWindowStart, recommendationFor } from "@/features/adventure/recommendation";
 import { SectionHeader } from "@/features/adventure/components/SectionHeader";
-import { playerToday, requireCharacter } from "@/features/player/queries";
+import { type PlayerWithCharacter, playerToday, requireCharacter } from "@/features/player/queries";
+import type { GameDate } from "@/lib/game";
 import { RecentXpList } from "@/features/progress/components/RecentXpList";
 import { listCompletionsSince, listRecentXp } from "@/features/progress/queries";
 import { QuestAction } from "@/features/quests/components/QuestAction";
 import { listQuestlines, listQuests } from "@/features/quests/queries";
 import { toCardData } from "@/features/quests/view";
-import { isoWeekStart } from "@/lib/game";
 
 export const metadata: Metadata = { title: "모험" };
 
@@ -31,10 +34,11 @@ async function Adventure() {
   const [quests, questlines, completions, recent] = await Promise.all([
     listQuests(today),
     listQuestlines(today),
-    listCompletionsSince(isoWeekStart(today)),
+    listCompletionsSince(completionWindowStart(today)),
     listRecentXp(3),
   ]);
   const board = selectBoard(quests, questlines, today, completions);
+  const todayAdventure = await todayPanel(player, today, { quests, questlines, completions });
   const { character } = player;
 
   return (
@@ -45,6 +49,8 @@ async function Adventure() {
         totalXp={character.totalXp}
         action={<SettingsLink />}
       />
+
+      {!board.isEmpty && <TodayAdventure {...todayAdventure} />}
 
       {board.isEmpty ? (
         <PixelFrame variant="parchment">
@@ -181,6 +187,44 @@ async function Adventure() {
       )}
     </div>
   );
+}
+
+/** Pick the Today's Adventure state: fixed picks once started, otherwise a fresh recommendation. */
+async function todayPanel(
+  player: PlayerWithCharacter,
+  today: GameDate,
+  loaded: Parameters<typeof recommendationFor>[2] & {},
+): Promise<Parameters<typeof TodayAdventure>[0]> {
+  const adventure = await getAdventure(today);
+  const doneToday = new Set(
+    loaded.completions.filter((c) => c.occurrenceDate === today).map((c) => c.questId),
+  );
+  const byId = new Map(loaded.quests.map((q) => [q.id, q]));
+  const steps: AdventureStep[] = (adventure?.questIds ?? []).flatMap((id) => {
+    const quest = byId.get(id);
+    if (!quest || quest.status === "archived") return [];
+    return [{ quest, done: doneToday.has(id) || quest.status === "completed" }];
+  });
+
+  if (steps.length && steps.some((s) => !s.done)) {
+    return { state: "active", steps, briefing: adventure?.briefing ?? null, today };
+  }
+  const recommendation = await recommendationFor(player, today, loaded);
+  if (steps.length) {
+    return {
+      state: "done",
+      steps,
+      character: { name: player.character.name, outfit: player.character.outfit },
+      canContinue: recommendation.picks.length > 0,
+    };
+  }
+  if (!recommendation.picks.length) return { state: "rest" };
+  return {
+    state: "ready",
+    titles: recommendation.picks.map((p) => byId.get(p.questId)?.title ?? ""),
+    totalXp: recommendation.totalXp,
+    totalMinutes: recommendation.totalMinutes,
+  };
 }
 
 export default function AdventurePage() {

@@ -127,3 +127,20 @@ export async function xpByDay(
   }
   return [...totals].map(([date, xp]) => ({ date, xp }));
 }
+
+/** XP per stat earned on game days from `from` onward (reversals included). */
+export async function statXpSince(from: GameDate): Promise<Record<Stat, number>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("xp_logs")
+    .select("amount, stat, meta")
+    .not("stat", "is", null)
+    .gte("created_at", new Date(Date.parse(`${from}T00:00:00Z`) - 86_400_000).toISOString());
+  if (error) throw error;
+  const totals: Record<Stat, number> = { int: 0, foc: 0, vit: 0, soc: 0, cre: 0 };
+  for (const r of data) {
+    const date = (r.meta as { game_date?: string } | null)?.game_date;
+    if (r.stat && date && date >= from) totals[r.stat] += r.amount;
+  }
+  return totals;
+}

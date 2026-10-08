@@ -133,6 +133,7 @@
   --color-on-parchment: var(--color-ink-900);
   --color-on-parchment-muted: var(--color-parchment-900);
   --color-boss-stamp: var(--color-crimson-700);
+  --color-parchment-divider: var(--color-parchment-500);
 
   /* XP / progress — flat 3-band fill, never a gradient */
   --color-xp-fill: var(--color-gold-300);
