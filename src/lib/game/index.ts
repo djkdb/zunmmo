@@ -8,3 +8,4 @@ export * from "./repeat";
 export * from "./quests";
 export * from "./streak";
 export * from "./achievements";
+export * from "./recommend";
