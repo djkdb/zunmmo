@@ -112,6 +112,20 @@ describe.skipIf(!available)("schedules & adventures", () => {
     );
   });
 
+  it("holds at most twelve quests in a day's adventure", async () => {
+    const twelve = Array.from({ length: 12 }, () => aliceQuest);
+    await asUser(alice, (c) =>
+      c.query(`insert into adventures (game_date, quest_ids) values ('2026-10-09', $1)`, [twelve]),
+    );
+    await expect(
+      asUser(alice, (c) =>
+        c.query(`insert into adventures (game_date, quest_ids) values ('2026-10-10', $1)`, [
+          [...twelve, aliceQuest],
+        ]),
+      ),
+    ).rejects.toThrow(/adventures_quest_ids_check/);
+  });
+
   it("blocks anonymous access", async () => {
     await expect(asUser(null, (c) => c.query("select * from adventures"))).rejects.toThrow(
       /permission denied/,
