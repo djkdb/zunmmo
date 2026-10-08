@@ -17,6 +17,7 @@
 | 스택, 디렉터리, DB 스키마, RLS, 테스트 | `docs/ARCHITECTURE.md` |
 | Phase 계획 | `docs/ROADMAP.md` |
 | 배포·런치 체크리스트·베타 운영 | `docs/DEPLOY.md` |
+| 페르소나·시뮬레이션 결과 | `docs/PERSONAS.md` |
 | 아트 방향 | `design/ART_DIRECTION.md` |
 | 픽셀 제작·렌더링 규칙 | `design/PIXEL_RULES.md` |
 | 색 토큰 | `design/COLOR_PALETTE.md` |

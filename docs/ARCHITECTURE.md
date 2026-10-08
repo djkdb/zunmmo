@@ -280,6 +280,7 @@ user_achievements (
 | `lib/game` | Vitest | 100% 브랜치 커버리지 목표 (규칙이 곧 제품) |
 | RPC/RLS | Vitest + `pg` (`supabase/tests`) — 실제 `authenticated`/`anon` 역할 + JWT claims로 실행 | 이중 완료, 타인 데이터 접근 거부, 컬럼 권한, reversal. 로컬 DB가 없으면 skip |
 | UI | Playwright (`e2e/`) — 로그인 코드는 Mailpit API에서 읽음 | 가입→캐릭터 생성→퀘스트→완료→XP smoke, axe(WCAG 2.1 AA) 전 화면. `E2E_PROD=1`이면 `next start`로 실행 |
+| 페르소나 여정 | Playwright (`e2e/personas.spec.ts`, `e2e/world.ts`) | 5명의 하루를 실제 앱으로 플레이 — 심야·복귀·일정 과밀·키보드. `Etc/GMT±N`으로 로컬 시각 고정. 저널: `test-results/personas/` ([PERSONAS](./PERSONAS.md)) |
 | 시각 회귀 | Playwright `toHaveScreenshot` (`e2e/visual.spec.ts`, `VISUAL=1`) | `/styleguide` art·pixel·game 섹션, reduced-motion으로 스프라이트 첫 프레임 고정. 스냅샷은 `e2e/visual.spec.ts-snapshots/`에 커밋 |
 | 시각 | Playwright 스크린샷 (Phase 8) | 픽셀 컴포넌트 회귀 |
 

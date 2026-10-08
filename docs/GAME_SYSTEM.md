@@ -77,6 +77,7 @@ export function questXp(type: QuestType, difficulty: Difficulty): number {
 - `expired`: 마감이 지난 미완료 boss/side/main. **XP 차감 없음.** UI 문구는 "기한 만료" (실패/패배 금지). **저장하지 않고 읽을 때 계산**한다 (`effectiveStatus()`) — 크론이 필요 없고, 마감을 연장하면 자동으로 `active`로 보인다.
 - 마감(`deadline`)은 타임스탬프가 아니라 **게임 날짜(date)**다. D-day는 `daysBetween(오늘 게임 날짜, deadline)`.
 - `archived`: 소프트 삭제. 하드 삭제는 `xp_logs`가 없는 퀘스트만 허용.
+- **다시 도전**: expired 단발 퀘스트는 한 번 탭으로 마감이 `retryDeadline(today)` = 오늘 + `RETRY_DAYS`(7일)로 바뀌어 다시 active가 된다. "보관"도 같은 자리에서 한 번에. 대시보드 EXPIRED 섹션과 퀘스트 상세에서 제공 (P3 페르소나).
 
 ### 1.5 반복 규칙 (`repeat_rule`)
 
@@ -332,15 +333,20 @@ weights = { urgency: 3, boss: 1.5, dueToday: 2, main: 1.2, balance: 0.5, load: 1
 구현: `recommendToday()` (`src/lib/game/recommend.ts`). 세부 규칙:
 
 - **후보**: active/expired 단발 퀘스트 + 오늘이 회차이고 아직 안 한 daily (`weekly_count`는 이번 주 횟수를 채우면 제외).
+  - **기한이 지난 보스는 후보가 아니다** — 시험 날짜가 지나면 "할 일"이 아니다 (다시 도전으로 새 날짜를 주면 복귀).
+  - **준비 단계가 남은 퀘스트라인의 보스**는 D-2 이전엔 후보가 아니다. 대신 그 Questline의 다음 단계가 `prep` 점수 = `w.urgency × urgency(보스 마감) + w.boss / 2`를 받는다 (보스를 미리 "하는" 대신 준비한다).
 - `urgency`: D-0·D-1 = 1.0, 이후 `1/daysLeft`, 마감 없음 = 0, **기한 만료 = 0.3** ("다시 도전" — 후보에는 남되 맨 위로 오지 않음).
 - `goalMomentum`: Questline마다 **다음 단계**(가장 먼저 만든 미완료 main)에만 `0.5 + 0.5 × 진행률`. 나머지 단계는 0.
 - `statNeglect`: `1 − (지난 7일 해당 스탯 XP / 가장 많이 자란 스탯 XP)`. 지난 7일 성장이 없으면 0.
 - 예상 시간이 비어 있으면 난이도 기본값 `DEFAULT_MINUTES` = ⭐1 15분 · ⭐2 30분 · ⭐3 60분 · ⭐4 90분 · ⭐5 120분.
 - **용량** = `daily_capacity_min`(기본 240) − 오늘 고정 일정 시간 (끝 시간이 없는 일정은 60분, 하루 종일 일정은 0분).
-- **선택**: 점수 내림차순(동점이면 마감 빠른 순 → XP 큰 순 → id)으로 용량 안에서 담는다. 최대 6개.
-  D-0/D-1 보스는 용량을 넘어도 항상 포함. 후보가 있으면 최소 1개.
-- 각 추천에는 가장 크게 기여한 항목이 `reason`(boss/deadline/daily/questline/balance/open)으로 붙는다 — GM 브리핑(Phase 7)의 재료.
+- **페이스** (`adventurePace`): 로컬 00:00–04:59 = `night`, 마지막 완료가 3일 이상 전 = `comeback`, 그 외 `normal`. night/comeback은 **가벼운 날**: 예산 = min(용량, 60분), 최대 2개 (`LIGHT_PACE`). GM 브리핑 문장과 같은 입력에서 계산해 말과 계획이 어긋나지 않는다.
+- **선택**: 점수 내림차순(동점이면 마감 빠른 순 → **만든 순서** → `sort_order` → id)으로 담는다. 루틴은 위에서 아래로 만든 순서대로 읽힌다.
+  D-0/D-1 보스는 용량을 넘어도 항상 포함. 나머지는 `max(예산 − 강제 보스 시간, GAP_MINUTES=30)` 안에서 — 일정·보스로 하루가 꽉 차도 15분짜리 퀘스트는 틈새에 들어간다. 최대 6개(가벼운 날 2개), 후보가 있으면 최소 1개.
+- **tooBig**: questline/prep/deadline 이유로 중요한데 예산보다 길어서 못 들어간 첫 퀘스트. 패널이 "작게 나누면 추천에 넣을 수 있어요"라고 알려 준다 (긴 영화 같은 사이드는 해당 없음).
+- 각 추천에는 가장 크게 기여한 항목이 `reason`(boss/prep/deadline/daily/questline/balance/open)으로 붙는다 — GM 브리핑의 재료.
 - 시작하면 `adventures(user_id, game_date)`에 고정된다. "다시 추천받기"는 같은 날 행을 덮어쓴다 (XP와 무관).
+- **계획은 플레이어 것**: 시작한 뒤 아직 안 한 퀘스트를 빼거나(마지막 하나는 제외), 오늘의 후보 중에서 더 담을 수 있다 (최대 6개). 편집하면 `source = 'custom'`.
 
 ## 9. 데이터 엔티티 요약
 
