@@ -118,11 +118,13 @@ function Notes({ notes }: { notes: PlanNotes }) {
   if (notes.tooBig) {
     lines.push(
       <li key="too-big">
-        <Link href={`/quests/${notes.tooBig.id}`} className="underline underline-offset-2">
-          {notes.tooBig.title}
+        {notes.tooBig.title}({formatMinutes(notes.tooBig.minutes)})는 오늘 시간에 안 들어가요.{" "}
+        <Link
+          href={`/quests/${notes.tooBig.id}?split=open#split`}
+          className="font-semibold text-on-parchment underline underline-offset-2"
+        >
+          단계로 나누기
         </Link>
-        ({formatMinutes(notes.tooBig.minutes)})는 오늘 시간에 안 들어가요. 작게 나누면 추천에 넣을
-        수 있어요.
       </li>,
     );
   }

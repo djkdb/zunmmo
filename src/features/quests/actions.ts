@@ -22,7 +22,9 @@ import {
   QUESTLINE_NEXT_STEP_DIFFICULTY,
   newlyUnlocked,
   questXp,
+  isSplittable,
   retryDeadline,
+  splitPlan,
   templateById,
   templateStat,
 } from "@/lib/game";
@@ -33,7 +35,9 @@ import {
   QuestInputSchema,
   MAX_STARTER_QUESTS,
   QuestlineStepsSchema,
+  SplitStepsSchema,
   questFormToObject,
+  splitLines,
   stepsFormToObject,
   validateNewDeadline,
 } from "./schemas";
@@ -350,4 +354,52 @@ export async function stashQuest(questId: string): Promise<Result<null>> {
   });
   if (error) return fail(codeFromDbError(error));
   return ok(null);
+}
+
+// ───────── splitting (GAME_MASTER §7) ─────────
+
+/** Split an unplayed main/side quest into 2–6 steps that share its XP (lib/game splitPlan). */
+export async function splitQuest(
+  questId: string,
+  _prev: QuestFormState,
+  formData: FormData,
+): Promise<QuestFormState> {
+  await requireCharacter();
+  const parsed = SplitStepsSchema.safeParse(splitLines(formData.get("steps")));
+  if (!parsed.success) {
+    return withValues(
+      fail("VALIDATION_FAILED", { steps: parsed.error.issues[0]!.message }),
+      formData,
+    );
+  }
+  const supabase = await createClient();
+  const { data: quest, error } = await supabase
+    .from("quests")
+    .select("type, status, difficulty, estimated_minutes")
+    .eq("id", questId)
+    .maybeSingle();
+  if (error) return withValues(fail(codeFromDbError(error)), formData);
+  if (!quest) return fail("QUEST_NOT_FOUND");
+  if (!isSplittable(quest.type) || quest.status !== "active") {
+    return withValues(fail("QUEST_NOT_SPLITTABLE"), formData);
+  }
+  const parts = splitPlan(
+    {
+      type: quest.type,
+      difficulty: quest.difficulty as Difficulty,
+      estimatedMinutes: quest.estimated_minutes,
+    },
+    parsed.data,
+  );
+  const { error: splitError } = await supabase.rpc("split_quest", {
+    p_quest_id: questId,
+    p_parts: parts.map((p) => ({
+      title: p.title,
+      difficulty: p.difficulty,
+      xp: p.xp,
+      estimated_minutes: p.estimatedMinutes,
+    })),
+  });
+  if (splitError) return withValues(fail(codeFromDbError(splitError)), formData);
+  redirect(`/quests/${questId}?split=${parts.length}`);
 }

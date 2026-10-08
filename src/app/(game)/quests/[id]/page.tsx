@@ -6,7 +6,8 @@ import { QuestCard } from "@/components/game/QuestCard";
 import { STAT_META } from "@/components/game/quest-meta";
 import { PixelIcon } from "@/components/pixel/PixelIcon";
 import { Button } from "@/components/ui/Button";
-import { setQuestArchived, updateQuest } from "@/features/quests/actions";
+import { setQuestArchived, splitQuest, updateQuest } from "@/features/quests/actions";
+import { SplitQuestForm } from "@/features/quests/components/SplitQuestForm";
 import { listCompletionsSince } from "@/features/progress/queries";
 import { ExpiredQuestActions } from "@/features/quests/components/ExpiredQuestActions";
 import { QuestAction } from "@/features/quests/components/QuestAction";
@@ -15,7 +16,7 @@ import { getQuest, listQuestlineOptions } from "@/features/quests/queries";
 import type { CreatableType } from "@/features/quests/schemas";
 import { toCardData } from "@/features/quests/view";
 import { playerToday, requireCharacter } from "@/features/player/queries";
-import { describeRepeat } from "@/lib/game";
+import { type SplittableType, describeRepeat, isSplittable } from "@/lib/game";
 import { formatMinutes } from "@/lib/utils/format";
 
 export const metadata: Metadata = { title: "퀘스트" };
@@ -38,9 +39,18 @@ async function QuestDetail({
   const doneToday = completions.some((c) => c.questId === quest.id);
   const archived = quest.status === "archived";
   const editable = quest.type !== "hidden";
+  const splittable =
+    isSplittable(quest.type) &&
+    (quest.status === "active" || quest.status === "expired") &&
+    !doneToday;
 
   return (
     <div className="flex flex-col gap-8">
+      {typeof query.split === "string" && /^\d$/.test(query.split) && (
+        <p role="status" className="text-small text-success-text">
+          {query.split}단계로 나눴어요. 퀘스트 게시판과 퀘스트라인에 이어서 보여요.
+        </p>
+      )}
       {query.saved && (
         <p role="status" className="text-small text-success-text">
           저장했어요.
@@ -92,6 +102,20 @@ async function QuestDetail({
           </>
         )}
       </dl>
+
+      {splittable && (
+        <SplitQuestForm
+          action={splitQuest.bind(null, quest.id)}
+          open={query.split === "open"}
+          quest={{
+            title: quest.title,
+            type: quest.type as SplittableType,
+            difficulty: quest.difficulty,
+            xp: quest.xp,
+            estimatedMinutes: quest.estimatedMinutes,
+          }}
+        />
+      )}
 
       {editable && !archived && (
         <details className="rounded-sm border border-border p-4">

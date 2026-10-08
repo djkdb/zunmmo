@@ -15,6 +15,7 @@ export const ERROR_MESSAGES = {
   ADVENTURE_FULL: "오늘의 모험에는 6개까지 담을 수 있어요.",
   ADVENTURE_LAST_PICK: "마지막 퀘스트는 뺄 수 없어요. 다시 추천받기를 눌러 보세요.",
   QUEST_NOT_ELIGIBLE: "오늘 할 수 있는 퀘스트가 아니에요.",
+  QUEST_NOT_SPLITTABLE: "진행 중인 메인·사이드 퀘스트만 나눌 수 있어요.",
   OTP_SEND_FAILED: "코드를 보내지 못했어요. 잠시 후 다시 시도해 주세요.",
   OTP_INVALID: "코드가 맞지 않거나 만료됐어요. 새 코드를 받아 주세요.",
   RATE_LIMITED: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",

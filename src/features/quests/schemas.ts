@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   type GameDate,
   MAX_QUESTLINE_STEPS,
+  MAX_SPLIT_PARTS,
+  MIN_SPLIT_PARTS,
   RepeatRuleSchema,
   STATS,
   daysBetween,
@@ -151,3 +153,16 @@ export function stepsFormToObject(formData: FormData) {
 
 /** Onboarding lets a new player take at most this many GM templates. */
 export const MAX_STARTER_QUESTS = 5;
+
+/** Steps typed one per line when splitting a quest (GAME_MASTER §7). */
+export const SplitStepsSchema = z
+  .array(z.string().trim().min(1).max(80, "단계 이름은 80자까지 쓸 수 있어요."))
+  .min(MIN_SPLIT_PARTS, `${MIN_SPLIT_PARTS}단계 이상으로 나눠 주세요.`)
+  .max(MAX_SPLIT_PARTS, `${MAX_SPLIT_PARTS}단계까지 나눌 수 있어요.`);
+
+export function splitLines(raw: unknown): string[] {
+  return (typeof raw === "string" ? raw : "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}

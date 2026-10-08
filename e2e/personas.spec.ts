@@ -182,6 +182,10 @@ test.describe("mobile personas", () => {
     const panel = adventurePanel(page);
     // A 2-hour step can never fit 90 minutes; the GM says so instead of hiding it.
     await expect(panel).toContainText("결제 모듈 붙이기(2시간)는 오늘 시간에 안 들어가요");
+    await expect(panel.getByRole("link", { name: "단계로 나누기" })).toHaveAttribute(
+      "href",
+      /\/quests\/[0-9a-f-]+\?split=open#split/,
+    );
     await panel.getByRole("button", { name: "START TODAY'S ADVENTURE" }).click();
     await expect(panel.getByRole("list", { name: "오늘의 모험 퀘스트" })).toBeVisible();
     await j.capture("adventure-started");
@@ -194,6 +198,20 @@ test.describe("mobile personas", () => {
     await panel.getByRole("button", { name: "오늘의 모험에 담기: 치과 예약" }).click();
     await expect(panel.getByRole("link", { name: "치과 예약" })).toBeVisible();
     await j.capture("plan-edited");
+
+    // The 2-hour step becomes three steps the day can hold (GAME_MASTER §7).
+    await page.goto("/quests");
+    await visible(page).getByRole("link", { name: "결제 모듈 붙이기" }).click();
+    await visible(page).getByText("단계로 나누기").click();
+    await visible(page)
+      .getByLabel("한 줄에 한 단계 (2–6줄)")
+      .fill("결제 API 조사하기\n결제 화면 만들기\n결제 테스트하기");
+    await expect(visible(page).getByText("합계 +120 XP (원래 +120 XP)")).toBeVisible();
+    await visible(page).getByRole("button", { name: "3단계로 나누기" }).click();
+    await expect(visible(page).getByText("3단계로 나눴어요.")).toBeVisible();
+    await j.capture("split-quest");
+    await page.goto("/adventure");
+    await expect(visible(page).getByText(/다음:\s*결제 API 조사하기/)).toBeVisible();
   });
 
   test("P3 소연 — back after three weeks away", async ({ page }) => {
