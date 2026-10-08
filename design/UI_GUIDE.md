@@ -51,7 +51,8 @@
 | Caption | Sans | 12 / 16 | 500 | 최소 크기 |
 
 - **Pixel** = `Galmuri11` (한글 지원 픽셀 폰트, OFL). **Sans** = `Pretendard Variable` (OFL).
-- 픽셀 폰트는 **설계 크기의 정수배에서만** 선명하다. 위 12/24/36px은 잠정값이며 **Phase 1에서 실제 렌더링(Windows/macOS/iOS/Android)으로 확정**한다. 확정 전까지 비정수배 크기 사용 금지.
+- 픽셀 폰트는 **설계 크기(12px)의 정수배에서만** 선명하다. Phase 1 실측(Chromium): 12/24/36px은 안티앨리어싱 픽셀 **0%**, 13px·16px은 약 80%. 토큰은 `text-pixel` / `text-pixel-2x` / `text-pixel-3x` 세 개뿐이다. (Windows·macOS·iOS 실기기 확인은 Beta 체크리스트)
+- 폰트 파일: Galmuri11을 KS X 1001 한글 2,350자 + Latin + 기호로 subset (505KB → 51KB). subset 밖 글자는 Pretendard로 대체 렌더링된다.
 - 픽셀 폰트를 **본문·설명·폼에 쓰지 않는다.** 한 줄 라벨, 숫자, 연출 텍스트에만.
 - 한국어 라벨이 길어지는 버튼(예: "퀘스트 수락")은 Sans 15/600 허용. 대표 CTA만 픽셀 폰트.
 - 사용자가 브라우저 글꼴 크기를 키우면 Sans는 `rem`으로 확대. 픽셀 라벨은 줌(확대)으로만 커진다 → 라벨 의미는 아이콘·`aria-label`로도 전달.

@@ -66,7 +66,7 @@
 
 ## 4. 방향 (Direction)
 
-- MVP: **정면 3/4 시점(오른쪽을 약간 바라봄) 단일 방향**. 대시보드·모달에서 충분.
+- MVP: **정면 단일 방향** (눈과 음영이 살짝 오른쪽으로 치우쳐 3/4 느낌만 준다). 대시보드·모달에서 충분.
 - 좌측을 봐야 하면 CSS `scaleX(-1)` 반전 허용 (반전은 정수 배율 스케일과 별개라 보간 없음 — 단, 비대칭 소품이 있으면 별도 프레임).
 - Phase 8+: 월드맵/걷기 연출용 4방향(down/up/left/right) — 시트에 row 추가로 확장.
 
@@ -76,7 +76,7 @@
 
 | State | 프레임 | 프레임당 ms | 루프 | 용도 / 트리거 | fallback | Phase |
 |-------|--------|-------------|------|----------------|----------|-------|
-| `idle` | 4 | 180, 180, 180, 180 (호흡: 2프레임째 몸 1ap 하강) | ∞ | 기본 대기 | — | **1** |
+| `idle` | 4 | 420, 220, 420, 220 (호흡: 서기 → 머리 1ap 하강 → 머리+상체 1ap 하강 → 머리 하강) | ∞ | 기본 대기 | — | **1** ✅ |
 | `walking` | 6 | 100 | ∞ | 랜딩 히어로, 화면 전환 | idle | 2 |
 | `running` | 8 | 80 | ∞ | 보스 마감 임박 연출 | walking | 8 |
 | `studying` | 4 | 220 | ∞ | 진행 중 퀘스트 stat=INT | idle | 8 |
@@ -96,7 +96,7 @@
 ### 6.1 이미지 레이아웃
 
 ```
-base-adventurer.png  (폭 = 32 × 최대프레임수, 높이 = 32 × 상태수)
+adventurer-<preset>.png  (폭 = 32 × 최대프레임수, 높이 = 32 × 상태수, 프리셋마다 1장)
 row 0: idle        [f0][f1][f2][f3]
 row 1: walking     [f0][f1][f2][f3][f4][f5]
 row 2: celebrating [f0]…[f5]
@@ -106,26 +106,28 @@ row 3: level-up    [f0]…[f7]
 - 프레임 간 여백 0, 빈 칸은 투명.
 - 모든 프레임은 기준선 y=30, 중심 x=16을 지킨다.
 
-### 6.2 메타데이터 JSON
+### 6.2 메타데이터
 
-```json
-{
-  "id": "base-adventurer",
-  "frameSize": { "w": 32, "h": 32 },
-  "anchor": { "x": 16, "y": 30 },
-  "image": "/sprites/characters/base-adventurer.png",
-  "states": {
-    "idle":        { "row": 0, "frames": 4, "durations": [180, 180, 180, 180], "loop": true },
-    "celebrating": { "row": 2, "frames": 6, "durations": [90, 90, 90, 90, 120, 200], "loop": false, "next": "idle" },
-    "level-up":    { "row": 3, "frames": 8, "durations": [80, 80, 80, 80, 80, 80, 150, 300], "loop": false, "next": "idle" }
+상태별 프레임과 지속 시간은 **원본 `art/characters/adventurer.ts`에서 정의**하고, `pnpm art:build`가 시트 PNG와 타입이 있는 메타데이터 모듈을 생성한다. 런타임에 JSON을 fetch하거나 검증할 필요가 없다 (빌드 시 타입 체크).
+
+```ts
+// src/components/game/character/sprite-sheets.generated.ts (생성됨 — 발췌)
+export const SPRITE_SHEETS = {
+  adventurer: {
+    frameSize: { w: 32, h: 32 },
+    anchor: { x: 16, y: 30 },
+    sheetSize: { w: 128, h: 32 },
+    images: { royal: "/sprites/characters/adventurer-royal.png", /* emerald, violet, ember */ },
+    states: {
+      idle: { row: 0, frames: 4, durations: [420, 220, 420, 220], loop: true },
+      // celebrating, level-up … (Phase 5)
+    },
   },
-  "fallbacks": { "walking": "idle", "running": "walking", "studying": "idle", "working": "idle",
-                 "exercising": "idle", "thinking": "idle", "sleeping": "idle",
-                 "surprised": "celebrating", "level-up": "celebrating" }
-}
+} as const;
 ```
-- Zod 스키마로 로드 시 검증 (`src/components/game/character/sprite-schema.ts`).
-- Aseprite `--data` JSON 출력에서 변환 스크립트로 생성 (Phase 1에서 `scripts/aseprite-to-sprite.ts`).
+
+- 아직 그리지 않은 상태는 `CharacterSprite`의 `FALLBACKS` 체인으로 그려진 상태에 도달한다 (예: `level-up → celebrating → idle`). 모든 상태가 해석되는지 테스트로 보장.
+- 의상 색은 원본의 슬롯 `1`/`2`/`3`을 프리셋 램프로 치환하는 팔레트 스왑으로 만든다 (`art/palette.ts` `OUTFIT_PRESETS`).
 
 ## 7. 커스터마이징 데이터 구조
 

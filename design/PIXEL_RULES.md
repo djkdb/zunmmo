@@ -103,7 +103,7 @@
 
 에셋 PR마다 다음을 확인한다:
 
-- [ ] LIFE-32 팔레트 외 색 없음 (스크립트: `pnpm art:check` — Phase 1에서 PNG 팔레트 검사 스크립트 추가)
+- [ ] LIFE-32 팔레트 외 색 없음 (`pnpm art:check`, `pnpm test`에도 포함)
 - [ ] 알파 0/255 외 반투명 픽셀 없음
 - [ ] 캔버스 크기가 §1.1 표와 일치
 - [ ] 외곽선 1ap, 더블 픽셀 코너 없음
@@ -188,18 +188,24 @@
 
 ## 8. 파일 & 파이프라인
 
+**원본은 팔레트 코드 그리드(TypeScript)**다. 한 글자 = 1ap, 코드는 `art/palette.ts`의 LIFE-32. 원본이 텍스트라서 PR diff로 픽셀 단위 리뷰가 가능하고, 테스트가 크기·코드·여백을 강제한다.
+
 ```
-art/                                  # 원본 (git 포함, 빌드 제외)
-  palette/life-32.gpl                 # Aseprite/GIMP 팔레트
-  characters/base-adventurer.aseprite
-  icons/icons.aseprite
+art/                                        # 원본 (git 포함, 앱 번들에는 포함 안 됨)
+  palette.ts                                # LIFE-32 + 의상 팔레트 스왑 프리셋
+  characters/adventurer.ts                  # 32×32 프레임, 상태별 프레임/지속시간
+  icons.ts                                  # 16×16 아이콘, 8×8 글리프
+  palette/life-32.gpl                       # (생성) Aseprite/GIMP 팔레트
+scripts/art/build.ts                        # pnpm art:build
+scripts/art/check.ts                        # pnpm art:check — 팔레트/알파 검사
 public/
-  sprites/characters/base-adventurer.png    # 가로 프레임, 세로 상태(row) 스트립
-  sprites/characters/base-adventurer.json   # 프레임/상태 메타데이터 (CHARACTER_GUIDE §6)
-  icons/icons.png + icons.json
+  sprites/characters/adventurer-<preset>.png   # (생성) 가로=프레임, 세로=상태(row)
+  icons/icons.png, icons/glyphs.png            # (생성) 아틀라스
+src/components/game/character/sprite-sheets.generated.ts   # (생성) 시트 메타데이터
+src/components/pixel/icons.generated.ts                    # (생성) 아이콘 이름 타입 + 좌표
+src/app/icon.png                                           # (생성) 32×32 파비콘 (머리 크롭 2×)
 ```
 
-- 도구: **Aseprite** (권장). 내보내기: PNG-8(인덱스 컬러) 또는 PNG-32 무손실, 1× 그대로.
-- 이름: `kebab-case`, 상태는 Aseprite 태그명 = JSON state 키 (`idle`, `walk`, `level-up`).
-- 압축: `oxipng -o max --strip safe` (손실 압축 금지).
-- 새 에셋은 `/styleguide`의 Sprite 갤러리에 추가해 2×/3×/4×에서 리뷰.
+- 생성 파일은 커밋하되 손으로 고치지 않는다. 원본 수정 → `pnpm art:build` → 결과 PNG를 `/styleguide`에서 2×/3×/4×로 확인.
+- Aseprite로 작업해도 된다: `life-32.gpl`을 불러와 그리고, 결과를 그리드 원본으로 옮긴다(변환 스크립트는 필요해지면 추가).
+- 출력은 1× RGBA PNG, 무손실. 이름은 `kebab-case`, 상태 키는 CHARACTER_GUIDE §5의 이름(`idle`, `level-up` …).

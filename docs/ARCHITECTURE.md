@@ -33,10 +33,10 @@
 ├─ docs/                         # 제품/시스템 문서
 ├─ design/                       # 아트 디렉션/디자인 시스템 문서
 ├─ public/
-│  ├─ sprites/                   # 캐릭터 스프라이트 시트 (*.png + *.json)
-│  ├─ icons/                     # 16×16 픽셀 아이콘 (단일 시트 권장)
-│  └─ fonts/                     # self-host 폰트 (Galmuri, Pretendard subset)
-├─ art/                          # 원본 .aseprite 소스 (빌드에 포함 안 됨)
+│  ├─ sprites/                   # (생성) 캐릭터 스프라이트 시트 PNG
+│  └─ icons/                     # (생성) 아이콘/글리프 아틀라스 PNG
+├─ art/                          # 픽셀 아트 원본 — 팔레트 코드 그리드(TS). PIXEL_RULES §8
+├─ scripts/art/                  # art:build / art:check
 ├─ supabase/
 │  ├─ migrations/                # 타임스탬프 SQL 마이그레이션 (유일한 스키마 변경 경로)
 │  └─ seed.sql                   # achievements 등 정적 데이터
@@ -73,7 +73,8 @@
    │  └─ utils/
    ├─ styles/
    │  ├─ tokens.css              # ★ 디자인 토큰 단일 소스 (design/COLOR_PALETTE.md와 1:1)
-   │  └─ globals.css
+   │  ├─ pixel.css               # 픽셀 UI 프리미티브 (frame/button/bar/tag)
+   │  └─ fonts/                  # self-host 폰트 (Galmuri11 subset, Pretendard dynamic subset) + 라이선스
    └─ middleware.ts              # 세션 갱신 + (game) 라우트 보호
 ```
 

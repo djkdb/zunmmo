@@ -30,17 +30,19 @@ Next.js (App Router) · TypeScript strict · Tailwind CSS v4 + CSS 변수 토큰
 
 ## 명령어
 
-> Phase 1 스캐폴드 이후 확정. 현재 저장소에는 문서만 있다.
-
 ```bash
-pnpm dev          # 개발 서버
-pnpm typecheck    # tsc --noEmit
-pnpm lint         # eslint
-pnpm test         # vitest
-pnpm build        # next build
-pnpm db:types     # supabase gen types → src/lib/supabase/database.types.ts
+pnpm dev            # 개발 서버 (/styleguide = 디자인 시스템 레퍼런스, dev/preview 전용)
+pnpm typecheck      # next typegen && tsc --noEmit
+pnpm lint           # eslint (의존 방향 import 규칙 포함)
+pnpm test           # vitest — lib/game, 아트 원본·팔레트 검사 포함
+pnpm build          # next build
+pnpm format         # prettier
+pnpm art:build      # /art 원본 → PNG 시트 + 타입 매니페스트 + 파비콘 (생성 파일은 손으로 고치지 않음)
+pnpm art:check      # 배포 PNG의 LIFE-32 팔레트/알파 검사
 ```
 커밋/푸시 전 `pnpm typecheck && pnpm lint && pnpm test`가 통과해야 한다.
+
+**Next.js 16.4**는 학습 데이터보다 새 버전이다 (Cache Components 기본, Turbopack, 비동기 request API). Next API를 쓰기 전에 `node_modules/next/dist/docs/`의 해당 가이드를 먼저 읽는다 (`AGENTS.md`).
 
 ## 작업 방식 (Phase Workflow)
 
@@ -80,6 +82,7 @@ pnpm db:types     # supabase gen types → src/lib/supabase/database.types.ts
 - 모든 화면을 같은 카드로 도배하지 않는다 (UI_GUIDE §5.2 섹션별 컴포넌트 사용).
 - 화면당 Accent CTA는 최대 1개. 과도한 애니메이션 금지, `prefers-reduced-motion` 존중.
 - placeholder UI를 최종 디자인처럼 남기지 않는다. 새 컴포넌트/에셋은 `/styleguide`에 먼저 추가한다.
+- `cn()`은 클래스를 이어 붙일 뿐 충돌을 해결하지 않는다. 컴포넌트 내부의 `display`/크기 유틸리티를 `className`으로 덮어쓰지 말고 바깥을 감싼다.
 
 ### 코드 품질
 - TypeScript strict, `any` 금지 (불가피하면 `unknown` + 좁히기).

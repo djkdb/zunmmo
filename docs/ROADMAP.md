@@ -33,18 +33,19 @@
 
 **Exit**: 사용자 문서 리뷰 & 열린 질문(PRODUCT_SPEC §11) 결정
 
-## Phase 1 — Design System
-- Next.js + TS strict + Tailwind v4 + ESLint/Prettier + Vitest 스캐폴드 (pnpm)
-- `src/styles/tokens.css` — COLOR_PALETTE 1:1, 다크 기본 + 라이트 토큰 자리
-- 폰트: Galmuri11(픽셀 디스플레이), Pretendard(본문) self-host + subset
-- Pixel primitives: `PixelFrame`, `PixelButton`, `PixelBar`, `PixelIcon`, `Sprite`, `PixelBadge`
-- Modern primitives: `Button`, `Input`, `Textarea`, `Select`, `Dialog`/`Sheet`, `Toast`
-- Game components (정적 데이터): `XpBar`, `LevelBadge`, `QuestCard`(4 타입), `StatBar`, `CharacterSprite`(idle)
-- 아트: 기본 캐릭터 idle 4프레임, 퀘스트 타입 아이콘 5종, 스탯 아이콘 5종, UI 아이콘 ~12종
-- `/styleguide` 페이지 (dev 전용) — 모든 토큰/컴포넌트/상태 시연
-- `lib/game` 핵심 규칙 + 테스트 (xp, level, stats, time) — UI가 실제 규칙을 쓰도록
+## Phase 1 — Design System ✅
+- [x] Next.js 16.4 + TS strict + Tailwind v4 + ESLint(의존 방향 규칙)/Prettier + Vitest + Playwright 스캐폴드 (pnpm)
+- [x] `src/styles/tokens.css` — COLOR_PALETTE 1:1, Tailwind 기본 팔레트/섀도/radius 비활성화, 라이트 토큰 자리
+- [x] 폰트: Galmuri11 subset 51KB (12/24/36px 실측 AA 0%), Pretendard dynamic subset
+- [x] Pixel primitives: `PixelFrame`, `PixelButton`, `PixelBar`, `PixelIcon`/`PixelGlyph`, `Sprite`, `PixelTag`, `PixelStars`, `PixelSpinner`, skeleton
+- [x] Modern primitives: `Button`, `TextField`, `Dialog`/`Sheet`(native dialog), `Toast`(되돌리기 액션)
+- [ ] `Textarea`, `Select` → Phase 4 퀘스트 폼에서 실제 사용처와 함께 추가
+- [x] Game components: `XpBar`, `LevelBadge`, `QuestCard`(5 타입), `QuestRow`, `CompleteButton`, `QuestTypeTag`, `StatBar`, `CharacterSprite`(idle + 상태 fallback)
+- [x] 아트 파이프라인(`pnpm art:build` / `art:check`) + 캐릭터 idle 4프레임 × 의상 4종, 아이콘 20종(퀘스트 5·스탯 5·UI 10), 난이도 별 글리프, 파비콘
+- [x] `/styleguide` (dev/preview 전용) — 토큰/에셋/컴포넌트/상태 시연
+- [x] `lib/game` (xp, level, stats, titles, time) + 테스트
 
-**Exit**: 스타일가이드에서 모바일/데스크톱 스크린샷 리뷰 통과, 명암비 검증, `pnpm typecheck && pnpm test` 통과
+**Exit** (통과): 모바일 390px·데스크톱 1280px 스크린샷 리뷰, 가로 스크롤 없음, 버튼 터치 타깃 ≥ 44px, 콘솔 오류 0, 키보드/ESC/포커스 복귀·reduced-motion 확인, `typecheck`·`lint`·`test`(103)·`build` 통과
 
 ## Phase 2 — Landing Page
 - 히어로: 픽셀 장면(캐릭터 + 퀘스트 보드) + 한 문장 가치 제안 + CTA
