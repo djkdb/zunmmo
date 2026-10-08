@@ -105,39 +105,53 @@ type RepeatRule =
 퀘스트 완료는 반드시 **단일 Postgres 트랜잭션**(RPC)으로 처리한다.
 
 ```
-complete_quest(p_quest_id uuid, p_occurrence_date date)
+complete_quest(p_quest_id uuid)          -- 날짜는 받지 않는다: DB가 player_game_date()로 계산
   1. SELECT … FROM quests WHERE id = p_quest_id AND user_id = auth.uid() FOR UPDATE
      └ 없음 → 'QUEST_NOT_FOUND'
   2. status 검증: active 여야 함 → 아니면 'QUEST_NOT_ACTIVE'
-  3. INSERT quest_completions (quest_id, user_id, occurrence_date)
+  3. INSERT quest_completions (quest_id, user_id, occurrence_date = 오늘의 게임 날짜)
      └ UNIQUE(quest_id, occurrence_date) 위반 → 'ALREADY_COMPLETED' (이중 지급 방지의 핵심)
-  4. INSERT xp_logs (amount = quests.xp, reason = 'quest_complete', stat = quests.primary_stat, …)
+  4. INSERT xp_logs (amount = quests.xp, reason = 'quest_complete', stat = quests.primary_stat,
+                    meta = { type, difficulty, game_date })
   5. UPDATE characters SET total_xp = total_xp + amount
   6. UPDATE character_stats SET xp = xp + amount WHERE stat = quests.primary_stat
   7. 단발 퀘스트면 UPDATE quests SET status = 'completed', completed_at = now()
-  8. RETURN { xp_gained, total_xp_before, total_xp_after, stat, stat_xp_after }
+  8. RETURN xp_result { quest_id, completion_id, occurrence_date, xp_change,
+                       total_xp_before, total_xp_after, stat, stat_xp_after }
 ```
 
+- 클라이언트가 날짜를 보내지 않으므로 "어제 것 몰아서 완료"로 daily XP를 중복 획득할 수 없다.
 - 함수는 `SECURITY DEFINER` + `SET search_path = ''` + 내부에서 `auth.uid()` 소유권 검증.
 - 클라이언트(`authenticated` role)에는 `xp_logs`, `quest_completions`, `character_stats` **INSERT/UPDATE 권한이 없다.** `characters`는 `name`, `appearance` 컬럼만 UPDATE 가능.
 
 ### 2.2 후처리 (Application Layer, 같은 Server Action 안)
 
+`completeQuest()` (`src/features/quests/actions.ts`):
+
 ```
-const result = await rpc('complete_quest', …)
-const levelUp  = detectLevelUp(result.total_xp_before, result.total_xp_after)   // lib/game/level.ts
-const unlocked = await evaluateAchievements(userId, event)                      // lib/game/achievements.ts + grant_achievement RPC
-const goalClear = await checkGoalClear(quest.goal_id)                           // 모든 연결 퀘스트 완료 시
-return { xpGained, levelUp, unlocked, goalClear }  // → UI 연출 큐
+const result    = await rpc('complete_quest', { p_quest_id })
+const goalClear = quest.goal_id && 모든 main/boss 완료
+                  ? await rpc('clear_goal', { p_goal_id, p_bonus: goalClearBonus(xp 합) })   // §3
+                  : null
+const progress  = await rpc('player_progress')                      // 집계 (RLS 하에서 실행)
+const badges    = newlyUnlocked(snapshot, 이미 획득)                  // lib/game/achievements.ts
+await upsert user_achievements (ignoreDuplicates)                    // 멱등
+return { xpChange, totalXpBefore, totalXpAfter, levelUp: detectLevelUp(…), goalClear, achievements }
 ```
+
+클라이언트(`QuestCompleteButton`)는 낙관적으로 체크 → `GameEffects`가 연출 큐를 재생한다:
+XP 플로팅 → Questline 클리어 토스트 → 업적 토스트 → 레벨업 장면 (가장 큰 보상이 마지막).
+모든 연출은 `aria-live`로 한 문장 요약되고, `prefers-reduced-motion`에서는 움직임 없이 텍스트만 남는다.
 
 레벨은 DB에 저장하지 않고 `total_xp`에서 **파생**한다. 따라서 레벨 곡선을 바꿔도 마이그레이션이 필요 없다.
 
 ### 2.3 완료 취소 (Undo)
 
 - 같은 게임 날짜 안에서만 허용 (실수 정정 목적).
-- `uncomplete_quest` RPC: 해당 completion 삭제 + `xp_logs`에 **음수 정정 기록**(`reason = 'reversal'`, `meta.reverses = <log id>`) + 캐시 차감.
+- `uncomplete_quest(p_quest_id)` RPC: 오늘 게임 날짜의 completion 삭제 + `xp_logs`에 **음수 정정 기록**(`reason = 'reversal'`, `meta.reverses = <log id>`) + 캐시 차감.
 - 원장 기록은 삭제하지 않는다. 통계 쿼리는 reversal을 포함해 합산한다.
+- 완료 토스트의 **되돌리기**, 또는 눌린 완료 버튼을 다시 눌러 취소한다. 확인 대화상자는 없다.
+- Questline 클리어 후 단계 하나를 취소해도 클리어 보너스·상태는 유지된다 (goal이 더 이상 active가 아니므로 재완료 시 보너스가 다시 나오지 않는다).
 - 취소로 레벨이 내려가도 "레벨 다운" 연출은 하지 않는다 (XP 바만 조용히 조정).
 
 ### 2.4 `xp_logs` (원장)
@@ -150,14 +164,13 @@ return { xpGained, levelUp, unlocked, goalClear }  // → UI 연출 큐
 | quest_id | uuid? | 퀘스트 보상인 경우 |
 | completion_id | uuid? | FK → quest_completions (회차 추적) |
 | goal_id | uuid? | Questline 클리어 보너스인 경우 |
-| achievement_id | text? | 업적 보상인 경우 |
 | amount | int | 음수 허용(reversal만) |
 | stat | stat_type? | 스탯 귀속 |
 | reason | xp_reason | `quest_complete` \| `goal_clear` \| `achievement` \| `streak_bonus` \| `reversal` \| `admin_adjust` |
-| meta | jsonb | 계산 근거 (difficulty, multiplier, rule_version 등) |
+| meta | jsonb | 계산 근거 + **`game_date`** (모든 행에 기록 — 일별 XP 집계 기준). reversal은 `reverses` |
 | created_at | timestamptz | 인덱스 `(user_id, created_at desc)` |
 
-주간/월간 통계는 `xp_logs`를 `date_trunc`으로 집계 (필요 시 materialized view).
+일별/주간 통계는 `meta.game_date`로 집계한다 (`xpByDay`). reversal도 원래 완료일의 `game_date`를 갖기 때문에 취소한 날의 막대가 정확히 줄어든다.
 
 ## 3. Main Questline (`goals`)
 
@@ -260,44 +273,45 @@ post-MVP: 가장 높은 스탯에 따라 클래스 칭호 접미사 (INT → Sag
 | hobby, creative, play | CRE |
 | chore, admin | FOC |
 
-## 6. Streak (Phase 5)
+## 6. Streak
 
-- Daily 퀘스트별 연속 완료 일수 `streak` (회차가 없는 요일은 끊김으로 보지 않음).
-- 전체 "모험 연속일": Today's Adventure에서 1개 이상 완료한 연속 게임 날짜.
-- **Streak 보너스**: 7일 단위로 +10%, 최대 +30% (`streak_bonus` 별도 로그). 끊겨도 페널티 없음, "다시 시작" 문구.
-- Streak Freeze(휴식권): 주 1회 자동 — 하루 빠져도 유지 (번아웃 방지 원칙).
+- **모험 연속일** (`currentStreak(playDates, today)`): 퀘스트를 1개 이상 완료한 연속 게임 날짜 수.
+  오늘 아직 완료가 없으면 어제까지의 연속을 보여준다 (하루가 끝나기 전엔 끊기지 않음).
+- **보너스 XP 없음.** 연속일은 기록과 업적(`adventure_streak_*`)에만 쓰인다 — 연속이 끊기는 걸 "손해"로 느끼게 만들지 않기 위해서 (번아웃 방지 원칙). 끊겨도 페널티·경고 문구 없음.
+- `xp_reason`의 `streak_bonus` 값은 향후 확장용으로만 남겨 둔다.
 
 ## 7. Achievements
 
-데이터 기반 정의 (seed 테이블 `achievements`) + 평가기 (`src/lib/game/achievements.ts`).
+정의는 코드 상수 `ACHIEVEMENTS` (`src/lib/game/achievements.ts`, 16개). DB에는 획득 기록(`user_achievements`)만 둔다.
 
 ```ts
 type AchievementCriteria =
   | { kind: 'quests_completed'; count: number; questType?: QuestType }
   | { kind: 'level_reached'; level: number }
-  | { kind: 'stat_level_reached'; stat: Stat; level: number }
-  | { kind: 'boss_cleared'; count: number }
   | { kind: 'goal_cleared'; count: number }
-  | { kind: 'daily_streak'; days: number }
   | { kind: 'adventure_streak'; days: number }
-  | { kind: 'early_bird'; beforeHour: number; count: number }; // 로컬 시각 기준
+  | { kind: 'early_bird'; count: number }        // 플레이어 로컬 07시 이전 완료
+  | { kind: 'all_stats_level'; level: number };
 ```
 
-- 평가 시점: 완료 처리 직후 (이벤트 기반), 관련 criteria kind만 평가.
-- 지급: `grant_achievement(achievement_id)` RPC — `user_achievements` PK(user_id, achievement_id)로 멱등. 보상 XP가 있으면 같은 트랜잭션에서 `xp_logs(reason='achievement')`.
-- 희귀도: `common` / `rare` / `epic` / `legendary` → 배지 프레임 색만 다름 ([PIXEL_RULES §6](../design/PIXEL_RULES.md#6-ui-pixel-rules)).
+- **업적은 배지일 뿐 XP를 주지 않는다.** XP는 퀘스트와 Questline 클리어로만 움직인다.
+  그래서 지급을 앱 레이어에서 해도 안전하다: `user_achievements`는 본인 행 INSERT만 허용(id 형식 검사), PK(user_id, achievement_id)로 멱등.
+- 평가: 완료 직후 `player_progress()` 집계 → `ProgressSnapshot` → `newlyUnlocked(snapshot, 획득 목록)`.
+- 캐릭터 화면은 "기록된 배지 ∪ 현재 조건을 만족하는 배지"를 표시한다 (기록 누락이 있어도 보이도록).
+- 희귀도: `common` / `rare` / `epic` / `legendary` → 메달 베벨 색만 다름 (`--color-rarity-*`). 잠긴 배지는 실루엣 + "잠김" 텍스트로 조건을 보여준다.
 
-초기 업적 예시:
-
-| id | 이름 | 조건 | 보상 |
+| id | 이름 | 조건 | 희귀도 |
 |---|---|---|---|
-| `first_step` | 첫 걸음 | 퀘스트 1개 완료 | 20 XP |
-| `daily_7` | 일주일의 의지 | daily streak 7 | 70 XP |
-| `boss_slayer_1` | 첫 보스 토벌 | boss 1회 클리어 | 120 XP |
-| `level_10` | 숙련 모험가 | Lv.10 | — |
-| `questline_clear_1` | 이야기의 끝 | Questline 1회 클리어 | 200 XP |
-| `early_bird_10` | 새벽의 모험가 | 07시 이전 완료 10회 | 70 XP |
-| `balanced_5` | 균형 잡힌 영웅 | 모든 스탯 Lv.5 | 200 XP |
+| `first_step` | 첫 걸음 | 퀘스트 1개 완료 | common |
+| `quests_10` / `_50` / `_100` | 꾸준한 모험가 / 베테랑의 발자국 / 백 개의 퀘스트 | 완료 10 / 50 / 100 | common / rare / epic |
+| `daily_30` | 습관의 힘 | daily 30회 | rare |
+| `side_10` | 자유로운 영혼 | side 10개 | common |
+| `boss_slayer_1` / `_5` | 첫 보스 토벌 / 보스 사냥꾼 | boss 1 / 5 | rare / epic |
+| `questline_clear_1` | 이야기의 끝 | Questline 1회 클리어 | rare |
+| `level_5` / `_10` / `_20` | 모험가 / 숙련 모험가 / 베테랑 | Lv.5 / 10 / 20 | common / rare / epic |
+| `adventure_streak_7` / `_30` | 일주일의 의지 / 한 달의 전설 | 연속 7 / 30일 | rare / legendary |
+| `early_bird_10` | 새벽의 모험가 | 07시 이전 완료 10회 | rare |
+| `balanced_5` | 균형 잡힌 영웅 | 모든 스탯 Lv.5 | legendary |
 
 ## 8. Today's Adventure — 결정적(Deterministic) 추천 점수
 
@@ -327,7 +341,7 @@ profiles 1─1 characters 1─N character_stats
    │
    ├─N goals 1─N quests 1─N quest_completions
    │              │            │
-   │              └────────────┴──▶ xp_logs ◀── goals (clear bonus), achievements
+   │              └────────────┴──▶ xp_logs ◀── goals (clear bonus)
    ├─N schedules ──(optional)──▶ quests
    ├─N user_achievements N─1 achievements
    └─N adventures (오늘의 모험: date + quest_ids)
@@ -339,5 +353,6 @@ profiles 1─1 characters 1─N character_stats
 - `levelFromXp` / `levelProgress`: 경계값(0, 999, 1000, 1001, MAX), 음수 방어
 - `gameDate`: 타임존·`day_start_hour`·DST 없는 지역/있는 지역
 - `statLevel`: 경계값
-- `evaluateAchievements`: criteria kind별 true/false, 이미 획득한 업적 제외
+- `isAchieved` / `newlyUnlocked`: criteria kind별 true/false, 이미 획득한 업적 제외
+- `currentStreak`: 오늘 미완료 시 어제 기준, 공백일에서 끊김
 - `recommendToday`: 마감 임박/보스/용량 초과 시나리오

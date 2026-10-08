@@ -75,14 +75,17 @@
 
 **Exit** (통과): E2E — 4종 생성 + 보스 마감 검증 + 대시보드 표시, 수정·보관·복원 / DB 테스트 14 / axe 0
 
-## Phase 5 — XP + Level + Achievement
-- `xp_logs`, `achievements`, `user_achievements` + RPC (`complete_quest`, `uncomplete_quest`, `grant_achievement`, `clear_goal`)
-- 동시성 테스트 (같은 퀘스트 동시 완료 → 1회만 지급)
-- 연출: XP 플로팅, XP 바 채움, 레벨업 모달, 업적 토스트 (연출 큐)
-- 캐릭터 화면: 스탯, 업적 그리드, 최근 XP 기록, 주간 XP 그래프
-- Streak (daily / adventure)
+## Phase 5 — XP + Level + Achievement ✅
+- [x] `quest_completions`, `xp_logs`, `user_achievements` + RPC (`complete_quest`, `uncomplete_quest`, `clear_goal`, `player_progress`)
+- [x] 게임 날짜를 DB가 계산 (TS `gameDate`와 동일성 테스트), 동시성 테스트 (6개 동시 완료 → 1회 지급)
+- [x] 연출: XP 플로팅, 레벨업 장면, Questline 클리어·업적 토스트, `aria-live` 요약, reduced-motion 대응
+- [x] 낙관적 완료 + 되돌리기 토스트 (대시보드 · 퀘스트 목록 · 상세)
+- [x] 캐릭터 화면: 스탯, 업적 그리드(잠김 실루엣), 기록, 주간 XP 그래프, XP 원장
+- [x] 모험 연속일 (보너스 XP 없음 — GAME_SYSTEM §6), 대시보드 RECENT
+- [x] `(game)/error.tsx` 오류 상태
+- 변경: 업적은 XP 없는 배지 → `grant_achievement` RPC 대신 본인 INSERT. Daily별 streak은 Phase 8 이후 검토
 
-**Exit**: 원장 합계 == `total_xp` 검증 쿼리 통과, 레벨업/업적 연출 reduced-motion 대응
+**Exit** (통과): 원장 합계 == `total_xp` DB 테스트 / E2E — 완료·업적·되돌리기, 레벨업 장면 / axe 0 (캐릭터 화면 포함)
 
 ## Phase 6 — Calendar
 - `schedules`, `adventures` 마이그레이션

@@ -251,8 +251,7 @@ user_achievements (
 | quest_completions | own | **RPC only** | — | **RPC only** |
 | xp_logs | own | **RPC only** | — | — |
 | adventures | own | own | own | — |
-| achievements | all authenticated | — | — | — |
-| user_achievements | own | **RPC only** | — | — |
+| user_achievements | own | own (`achievement_id` 형식 검사, PK 멱등) | — | — |
 
 "own" = `user_id = (select auth.uid())`. RPC는 `SECURITY DEFINER`, `set search_path = ''`, 함수 내 소유권 검증.
 
@@ -261,10 +260,13 @@ user_achievements (
 ### 5.4 RPC 목록
 - `create_character(name, appearance)` — characters + 5개 character_stats 생성
 - `set_quest_archived(quest_id, archived)` / `set_goal_archived(goal_id, archived)` — 보관/복원 (status는 클라이언트가 직접 못 씀)
-- `complete_quest(quest_id, occurrence_date)` — [GAME_SYSTEM §2.1](./GAME_SYSTEM.md#21-완료-처리-db-함수-complete_quest)
-- `uncomplete_quest(completion_id)`
-- `grant_achievement(achievement_id)` — 조건 재검증은 앱 레이어, 멱등성은 DB
-- `clear_goal(goal_id)` — 모든 연결 퀘스트 완료 확인 + 보너스 지급
+- `complete_quest(quest_id)` → `xp_result` — 게임 날짜는 DB가 계산 ([GAME_SYSTEM §2.1](./GAME_SYSTEM.md#21-완료-처리-db-함수-complete_quest)). 오류: `QUEST_NOT_FOUND` / `QUEST_NOT_ACTIVE` / `ALREADY_COMPLETED`
+- `uncomplete_quest(quest_id)` → `xp_result` — 오늘 게임 날짜의 완료만, `reversal` 기록. 오류: `UNDO_WINDOW_PASSED`
+- `clear_goal(goal_id, bonus)` — 모든 main/boss 완료 확인 + 보너스(≤ 1000, 값은 `goalClearBonus()`) 지급 + goal `cleared`
+- `player_progress()` — `SECURITY INVOKER` 집계 (완료 수, 타입별, 클리어 수, 새벽 완료, 플레이 날짜). 업적 평가 입력
+- 내부 전용: `game_date_at(tz, day_start, at)`, `player_game_date(user)` — TS `gameDate()`와 같은 규칙 (DB 테스트로 일치 검증)
+
+업적 지급은 RPC가 아니다: 배지에 XP가 없으므로 `user_achievements`에 본인 행 INSERT만 허용한다 (GAME_SYSTEM §7).
 
 ## 6. 에러/로딩/빈 상태 규약
 
