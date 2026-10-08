@@ -35,7 +35,9 @@ const schedule = (o: Partial<ScheduleView>): ScheduleView => ({
   location: null,
   quest: null,
   minutes: 120,
+  repeat: null,
   ...o,
+  key: `${o.id ?? "s"}:${o.date ?? "2026-10-10"}`,
 });
 
 describe("calendar grids", () => {

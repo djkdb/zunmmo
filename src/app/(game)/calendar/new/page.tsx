@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { createSchedule } from "@/features/calendar/actions";
 import { ScheduleForm } from "@/features/calendar/components/ScheduleForm";
 import { playerToday, requireCharacter } from "@/features/player/queries";
 import { listQuests } from "@/features/quests/queries";
@@ -21,7 +22,14 @@ async function NewSchedule({
   const quests = (await listQuests(today)).filter(
     (q) => q.status === "active" && q.type !== "daily",
   );
-  return <ScheduleForm date={date} quests={quests.map((q) => ({ id: q.id, title: q.title }))} />;
+  return (
+    <ScheduleForm
+      action={createSchedule}
+      date={date}
+      quests={quests.map((q) => ({ id: q.id, title: q.title }))}
+      submitLabel="일정 추가"
+    />
+  );
 }
 
 export default function NewSchedulePage({ searchParams }: PageProps<"/calendar/new">) {

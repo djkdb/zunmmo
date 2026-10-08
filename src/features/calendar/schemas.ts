@@ -17,8 +17,26 @@ export const ScheduleInputSchema = z
       .transform((v) => (v === "" ? null : v))
       .nullable(),
     questId: z.uuid().nullable(),
+    /** Weekly repeat (classes, standing meetings). */
+    repeatWeekly: z.boolean(),
+    weekdays: z.array(z.number().int().min(1).max(7)).max(7),
+    until: z.iso.date("날짜를 골라 주세요.").nullable(),
   })
   .superRefine((s, ctx) => {
+    if (s.repeatWeekly && s.weekdays.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["weekdays"],
+        message: "반복할 요일을 하나 이상 골라 주세요.",
+      });
+    }
+    if (s.repeatWeekly && s.until && s.until < s.date) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["until"],
+        message: "반복 종료일은 시작일 이후여야 해요.",
+      });
+    }
     if (s.allDay) return;
     if (!s.startTime) {
       ctx.addIssue({ code: "custom", path: ["startTime"], message: "시작 시간을 골라 주세요." });
@@ -46,5 +64,8 @@ export function scheduleFormToObject(formData: FormData) {
     endTime: text("endTime"),
     location: text("location"),
     questId: text("questId"),
+    repeatWeekly: formData.get("repeatWeekly") === "on",
+    weekdays: [...new Set(formData.getAll("weekdays").map(Number))].filter((n) => n >= 1 && n <= 7),
+    until: text("until"),
   };
 }

@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/Button";
 import { type GameDate, isoWeekday, weekdayLabel } from "@/lib/game";
 import { formatGameDate, formatXpGain } from "@/lib/utils/format";
 
-import { deleteSchedule } from "../actions";
+import { deleteSchedule, skipOccurrence } from "../actions";
+import type { ScheduleView } from "../queries";
+import { describeRecurrence } from "../recurrence";
 import type { DayItems } from "../model";
 
 /** The selected day as an agenda: all-day items, then timed blocks, then what got done. */
@@ -70,10 +72,12 @@ export function DayAgenda({
                   </AgendaRow>
                 ))}
                 {allDay.map((s) => (
-                  <AgendaRow key={s.id}>
+                  <AgendaRow key={s.key}>
                     <span className="font-pixel text-pixel text-text-muted">일정</span>
-                    <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                    <DeleteSchedule id={s.id} date={date} title={s.title} />
+                    <Link href={editHref(s)} className="min-w-0 flex-1 truncate hover:underline">
+                      {s.title}
+                    </Link>
+                    <RemoveOccurrence schedule={s} />
                   </AgendaRow>
                 ))}
                 {items.dailies.map((q) => (
@@ -98,7 +102,7 @@ export function DayAgenda({
               <ul className="flex flex-col gap-2">
                 {timed.map((s) => (
                   <li
-                    key={s.id}
+                    key={s.key}
                     className="flex items-stretch gap-3 rounded-sm border border-border bg-surface p-3"
                   >
                     <span className="w-24 shrink-0 font-pixel text-pixel text-text-secondary">
@@ -111,7 +115,17 @@ export function DayAgenda({
                       )}
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="truncate text-body font-semibold">{s.title}</span>
+                      <Link
+                        href={editHref(s)}
+                        className="truncate text-body font-semibold hover:underline"
+                      >
+                        {s.title}
+                      </Link>
+                      {s.repeat && (
+                        <span className="text-caption text-text-muted">
+                          {describeRecurrence(s.repeat.weekdays, s.repeat.until)}
+                        </span>
+                      )}
                       {s.location && (
                         <span className="text-caption text-text-muted">{s.location}</span>
                       )}
@@ -124,7 +138,7 @@ export function DayAgenda({
                         </Link>
                       )}
                     </div>
-                    <DeleteSchedule id={s.id} date={date} title={s.title} />
+                    <RemoveOccurrence schedule={s} />
                   </li>
                 ))}
               </ul>
@@ -160,10 +174,19 @@ function AgendaRow({ children }: { children: ReactNode }) {
   );
 }
 
-function DeleteSchedule({ id, date, title }: { id: string; date: GameDate; title: string }) {
-  return (
-    <form action={deleteSchedule.bind(null, id, date)}>
-      <Button type="submit" variant="ghost" aria-label={`일정 삭제: ${title}`}>
+const editHref = (s: ScheduleView) => `/calendar/schedules/${s.id}?d=${s.date}`;
+
+/** One-off schedules are deleted; a weekly series only skips this occurrence here. */
+function RemoveOccurrence({ schedule: s }: { schedule: ScheduleView }) {
+  return s.repeat ? (
+    <form action={skipOccurrence.bind(null, s.id, s.date)}>
+      <Button type="submit" variant="ghost" aria-label={`이번만 건너뛰기: ${s.title}`}>
+        건너뛰기
+      </Button>
+    </form>
+  ) : (
+    <form action={deleteSchedule.bind(null, s.id, s.date)}>
+      <Button type="submit" variant="ghost" aria-label={`일정 삭제: ${s.title}`}>
         삭제
       </Button>
     </form>

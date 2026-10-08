@@ -38,6 +38,8 @@ export interface World {
     start: string;
     end?: string;
     allDay?: boolean;
+    /** ISO weekdays for a weekly series starting at dayOffset. */
+    weekdays?: number[];
   }>;
   /** Completions to replay, oldest first. */
   history?: Array<{ title: string; daysAgo: number }>;
@@ -130,13 +132,15 @@ export async function buildWorld(email: string, world: World): Promise<Map<strin
     for (const s of world.schedules ?? []) {
       const date = addDays(today, s.dayOffset);
       await c.query(
-        "insert into schedules (user_id, title, starts_at, ends_at, all_day) values ($1, $2, $3, $4, $5)",
+        `insert into schedules (user_id, title, starts_at, ends_at, all_day, repeat_weekdays)
+         values ($1, $2, $3, $4, $5, $6)`,
         [
           userId,
           s.title,
           fromLocal(date, s.allDay ? "00:00" : s.start, tz).toISOString(),
           s.end && !s.allDay ? fromLocal(date, s.end, tz).toISOString() : null,
           s.allDay ?? false,
+          s.weekdays ?? null,
         ],
       );
     }

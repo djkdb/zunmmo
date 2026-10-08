@@ -10,6 +10,9 @@ const base = {
   endTime: "17:00",
   location: "",
   questId: null,
+  repeatWeekly: false,
+  weekdays: [],
+  until: null,
 };
 
 describe("ScheduleInputSchema", () => {
@@ -24,5 +27,13 @@ describe("ScheduleInputSchema", () => {
         .success,
     ).toBe(true);
     expect(ScheduleInputSchema.safeParse({ ...base, endTime: "14:00" }).success).toBe(false);
+  });
+
+  it("needs weekdays for a weekly repeat and an end after the start", () => {
+    const weekly = { ...base, repeatWeekly: true, weekdays: [1, 3] };
+    expect(ScheduleInputSchema.safeParse(weekly).success).toBe(true);
+    expect(ScheduleInputSchema.safeParse({ ...weekly, weekdays: [] }).success).toBe(false);
+    expect(ScheduleInputSchema.safeParse({ ...weekly, until: "2026-10-01" }).success).toBe(false);
+    expect(ScheduleInputSchema.safeParse({ ...weekly, until: "2026-12-18" }).success).toBe(true);
   });
 });

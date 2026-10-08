@@ -50,3 +50,50 @@ test("add a schedule, see it on the calendar, then delete it", async ({ page }) 
   await visible(page).getByRole("button", { name: "일정 삭제: AI 스터디" }).click();
   await expect(visible(page).getByText("AI 스터디")).toHaveCount(0);
 });
+
+test("a weekly class repeats, skips one week and edits as a series", async ({ page }) => {
+  await startNewGame(page);
+  await page.goto("/calendar/new");
+  const form = visible(page);
+  await form.getByLabel("일정 이름").fill("자료구조 수업");
+  await form.getByLabel("시작").fill("10:30");
+  await form.getByLabel("끝 (선택)").fill("12:00");
+  await form.getByLabel(/매주 반복/).check();
+  // Today's weekday is preselected; the class also meets on the following day.
+  const tomorrowLabel = await page.evaluate(() => {
+    const labels = ["일", "월", "화", "수", "목", "금", "토"];
+    return `${labels[(new Date().getDay() + 1) % 7]}요일`;
+  });
+  await form.getByRole("checkbox", { name: tomorrowLabel }).check({ force: true });
+  await form.getByRole("button", { name: "일정 추가" }).click();
+  await expect(page).toHaveURL(/added=1/);
+  await expect(visible(page).getByRole("region", { name: /오늘/ })).toContainText("자료구조 수업");
+
+  // Next week it is there again, labelled as a weekly series.
+  await visible(page).getByRole("link", { name: "다음 주" }).click();
+  await expect(page).toHaveURL(/\/calendar\?d=\d{4}-\d{2}-\d{2}$/);
+  // Not today's agenda: the heading has no "· 오늘".
+  const nextWeek = visible(page).getByRole("region", { name: /^\d+월 \d+일 \(.\)$/ });
+  await expect(nextWeek).toContainText("자료구조 수업");
+  await expect(nextWeek).toContainText(/매주 /);
+
+  // Skip just that occurrence.
+  await nextWeek.getByRole("button", { name: "이번만 건너뛰기: 자료구조 수업" }).click();
+  await expect(visible(page).getByText("이번 회차를 건너뛰었어요.")).toBeVisible();
+  await expect(page).toHaveURL(/skipped=1/);
+  await expect(visible(page).getByRole("region", { name: /\d+월 \d+일/ })).not.toContainText(
+    "자료구조 수업",
+  );
+  await page.goto("/calendar");
+  await expect(visible(page).getByRole("region", { name: /오늘/ })).toContainText("자료구조 수업");
+
+  // Editing the series renames every occurrence.
+  await page.goto("/calendar");
+  await visible(page).getByRole("link", { name: "자료구조 수업" }).click();
+  await expect(page).toHaveURL(/\/calendar\/schedules\/[0-9a-f-]+\?d=/);
+  await expect(visible(page).getByText(/반복 일정이에요/)).toBeVisible();
+  await visible(page).getByLabel("일정 이름").fill("자료구조 강의");
+  await visible(page).getByRole("button", { name: "저장" }).click();
+  await expect(page).toHaveURL(/saved=1/);
+  await expect(visible(page).getByRole("region", { name: /오늘/ })).toContainText("자료구조 강의");
+});

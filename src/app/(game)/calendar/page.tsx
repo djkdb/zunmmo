@@ -66,9 +66,13 @@ async function Calendar({
   return (
     <div className="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-12">
       <div className="flex flex-col gap-4">
-        {params.added && (
+        {(params.added || params.saved || params.skipped) && (
           <p role="status" className="text-small text-success-text">
-            일정을 추가했어요.
+            {params.added
+              ? "일정을 추가했어요."
+              : params.saved
+                ? "일정을 저장했어요."
+                : "이번 회차를 건너뛰었어요."}
           </p>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3">
