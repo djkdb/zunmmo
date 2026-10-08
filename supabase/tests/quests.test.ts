@@ -1,0 +1,126 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { asUser, createUser, dbAvailable, deleteUsers, pool } from "./db";
+
+const available = await dbAvailable();
+
+const quest = (overrides: Record<string, unknown> = {}) => ({
+  title: "AI 강의 복습",
+  type: "side",
+  difficulty: 3,
+  xp: 70,
+  primary_stat: "int",
+  ...overrides,
+});
+
+function insertQuest(q: Record<string, unknown>) {
+  const cols = Object.keys(q);
+  return {
+    text: `insert into quests (${cols.join(", ")}) values (${cols.map((_, i) => `$${i + 1}`).join(", ")}) returning *`,
+    values: Object.values(q).map((v) =>
+      v !== null && typeof v === "object" ? JSON.stringify(v) : v,
+    ),
+  };
+}
+
+describe.skipIf(!available)("goals & quests", () => {
+  let alice: string;
+  let bob: string;
+  let aliceGoal: string;
+
+  beforeAll(async () => {
+    alice = await createUser();
+    bob = await createUser();
+    aliceGoal = await asUser(alice, async (c) => {
+      const { rows } = await c.query(
+        "insert into goals (title) values ('웹서비스 출시') returning id",
+      );
+      return rows[0].id as string;
+    });
+  });
+
+  afterAll(async () => {
+    await deleteUsers([alice, bob]);
+    await pool.end();
+  });
+
+  it("stores a quest owned by the caller", async () => {
+    const row = await asUser(alice, async (c) => (await c.query(insertQuest(quest()))).rows[0]);
+    expect(row).toMatchObject({ user_id: alice, status: "active", xp: 70 });
+  });
+
+  it("enforces per-type requirements", async () => {
+    await expect(
+      asUser(alice, (c) => c.query(insertQuest(quest({ type: "boss" })))),
+    ).rejects.toThrow(/quests_boss_needs_deadline/);
+    await expect(
+      asUser(alice, (c) => c.query(insertQuest(quest({ type: "daily" })))),
+    ).rejects.toThrow(/quests_daily_needs_repeat/);
+    await expect(
+      asUser(alice, (c) => c.query(insertQuest(quest({ type: "main" })))),
+    ).rejects.toThrow(/quests_main_needs_goal/);
+    const main = await asUser(
+      alice,
+      async (c) =>
+        (await c.query(insertQuest(quest({ type: "main", goal_id: aliceGoal })))).rows[0],
+    );
+    expect(main.goal_id).toBe(aliceGoal);
+  });
+
+  it("bounds XP and difficulty", async () => {
+    await expect(asUser(alice, (c) => c.query(insertQuest(quest({ xp: 5000 }))))).rejects.toThrow(
+      /check constraint/,
+    );
+    await expect(
+      asUser(alice, (c) => c.query(insertQuest(quest({ difficulty: 6 })))),
+    ).rejects.toThrow(/check constraint/);
+  });
+
+  it("refuses to attach someone else's questline", async () => {
+    await expect(
+      asUser(bob, (c) => c.query(insertQuest(quest({ type: "main", goal_id: aliceGoal })))),
+    ).rejects.toThrow(/NOT_FOUND/);
+  });
+
+  it("never lets clients set status or completion directly", async () => {
+    await expect(
+      asUser(alice, (c) => c.query(insertQuest(quest({ status: "completed" })))),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asUser(alice, (c) => c.query("update quests set status = 'completed'")),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      asUser(alice, (c) => c.query("update quests set completed_at = now()")),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it("archives and restores through the RPC", async () => {
+    const id = await asUser(
+      alice,
+      async (c) => (await c.query(insertQuest(quest({ title: "보관할 퀘스트" })))).rows[0].id,
+    );
+    const archived = await asUser(
+      alice,
+      async (c) => (await c.query("select * from set_quest_archived($1, true)", [id])).rows[0],
+    );
+    expect(archived.status).toBe("archived");
+    const restored = await asUser(
+      alice,
+      async (c) => (await c.query("select * from set_quest_archived($1, false)", [id])).rows[0],
+    );
+    expect(restored.status).toBe("active");
+    await expect(
+      asUser(bob, (c) => c.query("select set_quest_archived($1, true)", [id])),
+    ).rejects.toThrow(/QUEST_NOT_FOUND/);
+  });
+
+  it("isolates players", async () => {
+    const seen = await asUser(bob, async (c) => ({
+      quests: (await c.query("select 1 from quests")).rowCount,
+      goals: (await c.query("select 1 from goals")).rowCount,
+      updated: (await c.query("update quests set title = 'hacked'")).rowCount,
+      deleted: (await c.query("delete from quests")).rowCount,
+    }));
+    expect(seen).toEqual({ quests: 0, goals: 0, updated: 0, deleted: 0 });
+  });
+});

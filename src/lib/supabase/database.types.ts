@@ -61,6 +61,43 @@ export type Database = {
         };
         Relationships: [];
       };
+      goals: {
+        Row: {
+          cleared_at: string | null;
+          created_at: string;
+          description: string | null;
+          id: string;
+          status: Database["public"]["Enums"]["goal_status"];
+          target_date: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cleared_at?: string | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          status?: Database["public"]["Enums"]["goal_status"];
+          target_date?: string | null;
+          title: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          cleared_at?: string | null;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          status?: Database["public"]["Enums"]["goal_status"];
+          target_date?: string | null;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           created_at: string;
@@ -98,6 +135,81 @@ export type Database = {
         };
         Relationships: [];
       };
+      quests: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          deadline: string | null;
+          description: string | null;
+          difficulty: number;
+          estimated_minutes: number | null;
+          goal_id: string | null;
+          id: string;
+          primary_stat: Database["public"]["Enums"]["stat_type"];
+          repeat_rule: Json | null;
+          scheduled_for: string | null;
+          sort_order: number;
+          source: Database["public"]["Enums"]["quest_source"];
+          status: Database["public"]["Enums"]["quest_status"];
+          title: string;
+          type: Database["public"]["Enums"]["quest_type"];
+          updated_at: string;
+          user_id: string;
+          xp: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          deadline?: string | null;
+          description?: string | null;
+          difficulty: number;
+          estimated_minutes?: number | null;
+          goal_id?: string | null;
+          id?: string;
+          primary_stat: Database["public"]["Enums"]["stat_type"];
+          repeat_rule?: Json | null;
+          scheduled_for?: string | null;
+          sort_order?: number;
+          source?: Database["public"]["Enums"]["quest_source"];
+          status?: Database["public"]["Enums"]["quest_status"];
+          title: string;
+          type: Database["public"]["Enums"]["quest_type"];
+          updated_at?: string;
+          user_id?: string;
+          xp: number;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          deadline?: string | null;
+          description?: string | null;
+          difficulty?: number;
+          estimated_minutes?: number | null;
+          goal_id?: string | null;
+          id?: string;
+          primary_stat?: Database["public"]["Enums"]["stat_type"];
+          repeat_rule?: Json | null;
+          scheduled_for?: string | null;
+          sort_order?: number;
+          source?: Database["public"]["Enums"]["quest_source"];
+          status?: Database["public"]["Enums"]["quest_status"];
+          title?: string;
+          type?: Database["public"]["Enums"]["quest_type"];
+          updated_at?: string;
+          user_id?: string;
+          xp?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "quests_goal_id_fkey";
+            columns: ["goal_id"];
+            isOneToOne: false;
+            referencedRelation: "goals";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -121,8 +233,62 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      set_goal_archived: {
+        Args: { p_archived: boolean; p_goal_id: string };
+        Returns: {
+          cleared_at: string | null;
+          created_at: string;
+          description: string | null;
+          id: string;
+          status: Database["public"]["Enums"]["goal_status"];
+          target_date: string | null;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "goals";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      set_quest_archived: {
+        Args: { p_archived: boolean; p_quest_id: string };
+        Returns: {
+          completed_at: string | null;
+          created_at: string;
+          deadline: string | null;
+          description: string | null;
+          difficulty: number;
+          estimated_minutes: number | null;
+          goal_id: string | null;
+          id: string;
+          primary_stat: Database["public"]["Enums"]["stat_type"];
+          repeat_rule: Json | null;
+          scheduled_for: string | null;
+          sort_order: number;
+          source: Database["public"]["Enums"]["quest_source"];
+          status: Database["public"]["Enums"]["quest_status"];
+          title: string;
+          type: Database["public"]["Enums"]["quest_type"];
+          updated_at: string;
+          user_id: string;
+          xp: number;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "quests";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
     };
     Enums: {
+      goal_status: "active" | "cleared" | "archived";
+      quest_source: "manual" | "template" | "system";
+      quest_status: "active" | "completed" | "expired" | "archived";
+      quest_type: "main" | "daily" | "side" | "boss" | "hidden";
       stat_type: "int" | "foc" | "vit" | "soc" | "cre";
     };
     CompositeTypes: {
@@ -235,6 +401,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      goal_status: ["active", "cleared", "archived"],
+      quest_source: ["manual", "template", "system"],
+      quest_status: ["active", "completed", "expired", "archived"],
+      quest_type: ["main", "daily", "side", "boss", "hidden"],
       stat_type: ["int", "foc", "vit", "soc", "cre"],
     },
   },
