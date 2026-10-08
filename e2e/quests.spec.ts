@@ -38,6 +38,8 @@ test("create every quest type and see them on the adventure board", async ({ pag
   await visible(page).getByLabel("보스 퀘스트").check({ force: true });
   await visible(page).getByRole("button", { name: "게시판에 올리기" }).click();
   await expect(visible(page).getByText("보스 퀘스트에는 마감일이 필요해요.")).toBeVisible();
+  // React resets uncontrolled fields after an action; the typed title must survive the error.
+  await expect(visible(page).getByLabel("퀘스트 이름")).toHaveValue("마감 없는 보스");
 
   await page.goto("/adventure");
   const board = visible(page);

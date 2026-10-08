@@ -82,6 +82,7 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
     if (!touched.stat) setStat(DEFAULT_STAT[next]);
   }
 
+  const v = (key: string) => state?.values?.[key];
   const generalError = state && !state.ok && !state.error.fields ? state.error.message : null;
 
   return (
@@ -89,7 +90,7 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
       <TextField
         label="퀘스트 이름"
         name="title"
-        defaultValue={initial?.title}
+        defaultValue={v("title") ?? initial?.title}
         required
         maxLength={80}
         autoComplete="off"
@@ -146,6 +147,7 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
             <TextField
               label="새 퀘스트라인 이름"
               name="newGoalTitle"
+              defaultValue={v("newGoalTitle")}
               maxLength={80}
               placeholder="예: 나만의 웹서비스 출시하기"
               error={fieldError("newGoalTitle")}
@@ -221,7 +223,10 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
               label="일주일에 몇 번?"
               name="timesPerWeek"
               defaultValue={
-                initial?.repeat?.freq === "weekly_count" ? String(initial.repeat.timesPerWeek) : "3"
+                v("timesPerWeek") ??
+                (initial?.repeat?.freq === "weekly_count"
+                  ? String(initial.repeat.timesPerWeek)
+                  : "3")
               }
             >
               {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -318,7 +323,7 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
             min={5}
             max={1440}
             step={5}
-            defaultValue={initial?.estimatedMinutes ?? undefined}
+            defaultValue={v("estimatedMinutes") ?? initial?.estimatedMinutes ?? undefined}
             hint="오늘의 모험 추천이 하루 용량을 맞출 때 써요."
             error={fieldError("estimatedMinutes")}
           />
@@ -326,7 +331,7 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
             <Select
               label="메인 퀘스트라인과 연결 (선택)"
               name="goalId"
-              defaultValue={initial?.goalId ?? ""}
+              defaultValue={v("goalId") ?? initial?.goalId ?? ""}
             >
               <option value="">연결 안 함</option>
               {questlines.map((q) => (
@@ -339,7 +344,7 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
           <Textarea
             label="메모"
             name="description"
-            defaultValue={initial?.description ?? undefined}
+            defaultValue={v("description") ?? initial?.description ?? undefined}
             maxLength={1000}
             error={fieldError("description")}
           />

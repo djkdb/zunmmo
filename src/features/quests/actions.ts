@@ -5,7 +5,15 @@ import { redirect } from "next/navigation";
 import { type PlayerWithCharacter, playerToday, requireCharacter } from "@/features/player/queries";
 import { getProgress, getUnlockedAchievements } from "@/features/progress/queries";
 import type { CompletionOutcome } from "@/features/progress/types";
-import { type Result, codeFromDbError, fail, fieldErrors, ok } from "@/lib/errors";
+import {
+  type FormState,
+  type Result,
+  codeFromDbError,
+  fail,
+  fieldErrors,
+  ok,
+  withValues,
+} from "@/lib/errors";
 import { type Difficulty, detectLevelUp, goalClearBonus, newlyUnlocked, questXp } from "@/lib/game";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,7 +24,7 @@ import {
   validateNewDeadline,
 } from "./schemas";
 
-export type QuestFormState = Result<never> | null;
+export type QuestFormState = FormState;
 
 function toRow(input: QuestInput, goalId: string | null) {
   return {
@@ -53,6 +61,11 @@ export async function createQuest(
   _prev: QuestFormState,
   formData: FormData,
 ): Promise<QuestFormState> {
+  const failure = await saveNewQuest(formData);
+  return failure && withValues(failure, formData);
+}
+
+async function saveNewQuest(formData: FormData): Promise<QuestFormState> {
   const player = await requireCharacter();
   const parsed = QuestInputSchema.safeParse(questFormToObject(formData));
   if (!parsed.success) return fail("VALIDATION_FAILED", fieldErrors(parsed.error.issues));
@@ -77,6 +90,11 @@ export async function updateQuest(
   _prev: QuestFormState,
   formData: FormData,
 ): Promise<QuestFormState> {
+  const failure = await saveQuest(questId, formData);
+  return failure && withValues(failure, formData);
+}
+
+async function saveQuest(questId: string, formData: FormData): Promise<QuestFormState> {
   await requireCharacter();
   const parsed = QuestInputSchema.safeParse(questFormToObject(formData));
   if (!parsed.success) return fail("VALIDATION_FAILED", fieldErrors(parsed.error.issues));

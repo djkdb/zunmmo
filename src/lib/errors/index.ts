@@ -65,3 +65,20 @@ export function fieldErrors(
   }
   return fields;
 }
+
+/**
+ * State returned by a form action. React 19 resets uncontrolled fields after every action,
+ * so failures echo the submitted text back to be used as `defaultValue`.
+ */
+export type FormState = { ok: false; error: AppError; values?: Record<string, string> } | null;
+
+export function withValues(
+  failure: { ok: false; error: AppError },
+  formData: FormData,
+): NonNullable<FormState> {
+  const values: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string" && !key.startsWith("$")) values[key] = value;
+  }
+  return { ...failure, values };
+}
