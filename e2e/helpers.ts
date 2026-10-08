@@ -54,6 +54,8 @@ export async function startNewGame(
   await page.getByLabel("캐릭터 이름").fill(name);
   await page.getByText(outfit, { exact: true }).click();
   await page.getByRole("button", { name: "모험 시작" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/quests/);
+  await page.getByRole("link", { name: "나중에 고를게요" }).click();
   await expect(page).toHaveURL(/\/adventure/);
   await expect(page.locator("main header").filter({ visible: true })).toBeVisible();
   return email;
@@ -64,10 +66,11 @@ export async function startNewGame(
  * layout, so every lookup is narrowed to visible elements.
  */
 export const visible = (page: Page) => ({
-  getByLabel: (text: string) => page.getByLabel(text, { exact: true }).filter({ visible: true }),
+  getByLabel: (text: string | RegExp) =>
+    page.getByLabel(text, { exact: true }).filter({ visible: true }),
   getByRole: (role: Parameters<Page["getByRole"]>[0], options?: Parameters<Page["getByRole"]>[1]) =>
     page.getByRole(role, options).filter({ visible: true }),
-  getByText: (text: string) => page.getByText(text).filter({ visible: true }),
+  getByText: (text: string | RegExp) => page.getByText(text).filter({ visible: true }),
 });
 
 export async function addQuest(

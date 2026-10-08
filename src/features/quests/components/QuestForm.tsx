@@ -14,6 +14,7 @@ import {
   DEFAULT_DIFFICULTY,
   DEFAULT_STAT,
   type Difficulty,
+  QUESTLINE_FIRST_STEP_DIFFICULTY,
   type GameDate,
   type RepeatRule,
   STATS,
@@ -59,7 +60,10 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
 
   const [type, setType] = useState<CreatableType>(initial?.type ?? "side");
   const [difficulty, setDifficulty] = useState<Difficulty>(
-    initial?.difficulty ?? DEFAULT_DIFFICULTY[type],
+    initial?.difficulty ??
+      (type === "main" && !(initial?.goalId ?? questlines[0]?.id)
+        ? QUESTLINE_FIRST_STEP_DIFFICULTY
+        : DEFAULT_DIFFICULTY[type]),
   );
   const [stat, setStat] = useState<Stat>(initial?.primaryStat ?? DEFAULT_STAT[type]);
   const [touched, setTouched] = useState({
@@ -75,10 +79,14 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
     initial?.goalId ?? questlines[0]?.id ?? "new",
   );
 
+  // A brand-new questline starts with a small first step (GAME_MASTER §7).
+  const defaultDifficulty = (t: CreatableType, goal: string) =>
+    t === "main" && goal === "new" ? QUESTLINE_FIRST_STEP_DIFFICULTY : DEFAULT_DIFFICULTY[t];
+
   function chooseType(next: CreatableType) {
     setType(next);
     // Follow type defaults until the player picks a value themselves.
-    if (!touched.difficulty) setDifficulty(DEFAULT_DIFFICULTY[next]);
+    if (!touched.difficulty) setDifficulty(defaultDifficulty(next, goalChoice));
     if (!touched.stat) setStat(DEFAULT_STAT[next]);
   }
 
@@ -133,7 +141,10 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
             label="메인 퀘스트라인"
             name="goalId"
             value={goalChoice}
-            onChange={(e) => setGoalChoice(e.target.value)}
+            onChange={(e) => {
+              setGoalChoice(e.target.value);
+              if (!touched.difficulty) setDifficulty(defaultDifficulty(type, e.target.value));
+            }}
             error={fieldError("goalId")}
           >
             {questlines.map((q) => (
@@ -144,14 +155,34 @@ export function QuestForm({ action, today, questlines, initial, submitLabel }: Q
             <option value="new">+ 새 퀘스트라인</option>
           </Select>
           {goalChoice === "new" && (
-            <TextField
-              label="새 퀘스트라인 이름"
-              name="newGoalTitle"
-              defaultValue={v("newGoalTitle")}
-              maxLength={80}
-              placeholder="예: 나만의 웹서비스 출시하기"
-              error={fieldError("newGoalTitle")}
-            />
+            <>
+              <TextField
+                label="새 퀘스트라인 이름"
+                name="newGoalTitle"
+                defaultValue={v("newGoalTitle")}
+                maxLength={80}
+                placeholder="예: 나만의 웹서비스 출시하기"
+                error={fieldError("newGoalTitle")}
+              />
+              <Textarea
+                label="이어지는 단계 (선택, 한 줄에 하나)"
+                name="steps"
+                defaultValue={v("steps")}
+                rows={4}
+                placeholder={"로그인 기능 만들기\n랜딩 페이지 배포하기\n베타 테스터 10명 모으기"}
+                hint="첫 단계(위 퀘스트 이름)는 오늘 바로 시작할 수 있을 만큼 작게. 나머지는 ⭐3으로 만들어져요."
+                error={fieldError("steps")}
+              />
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-small text-text-secondary">
+                <input
+                  type="checkbox"
+                  name="lastIsBoss"
+                  defaultChecked={v("lastIsBoss") === "on"}
+                  className="size-5 accent-accent"
+                />
+                마지막 단계를 BOSS로 (아래 마감일이 보스의 마감이 돼요)
+              </label>
+            </>
           )}
         </div>
       )}

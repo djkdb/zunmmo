@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { type GameDate, RepeatRuleSchema, STATS, daysBetween } from "@/lib/game";
+import {
+  type GameDate,
+  MAX_QUESTLINE_STEPS,
+  RepeatRuleSchema,
+  STATS,
+  daysBetween,
+} from "@/lib/game";
 
 /** Quest types a player can create. HIDDEN quests are system-made (post-MVP). */
 export const CREATABLE_TYPES = ["main", "daily", "side", "boss"] as const;
@@ -123,3 +129,25 @@ export const GoalInputSchema = z.object({
   description: optionalText(1000, "1000자까지 쓸 수 있어요."),
   targetDate: IsoDate.nullable().default(null),
 });
+
+/** G5 — extra questline steps typed one per line when a new questline is created. */
+export const QuestlineStepsSchema = z.object({
+  steps: z
+    .array(z.string().trim().min(1).max(80, "단계 이름은 80자까지 쓸 수 있어요."))
+    .max(MAX_QUESTLINE_STEPS, `단계는 한 번에 ${MAX_QUESTLINE_STEPS}개까지 넣을 수 있어요.`),
+  lastIsBoss: z.boolean(),
+});
+
+export function stepsFormToObject(formData: FormData) {
+  const raw = formData.get("steps");
+  return {
+    steps: (typeof raw === "string" ? raw : "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean),
+    lastIsBoss: formData.get("lastIsBoss") === "on",
+  };
+}
+
+/** Onboarding lets a new player take at most this many GM templates. */
+export const MAX_STARTER_QUESTS = 5;

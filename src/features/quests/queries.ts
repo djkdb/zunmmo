@@ -34,6 +34,8 @@ export interface QuestView {
   goal: { id: string; title: string } | null;
   completedAt: string | null;
   createdAt: string;
+  /** Step order inside a batch created together (same created_at). */
+  sortOrder: number;
 }
 
 export interface QuestlineView {
@@ -47,7 +49,7 @@ export interface QuestlineView {
 }
 
 const QUEST_COLUMNS =
-  "id, title, description, type, difficulty, xp, primary_stat, status, deadline, scheduled_for, estimated_minutes, repeat_rule, goal_id, completed_at, created_at, goals (id, title)";
+  "id, title, description, type, difficulty, xp, primary_stat, status, deadline, scheduled_for, estimated_minutes, repeat_rule, goal_id, completed_at, created_at, sort_order, goals (id, title)";
 
 type QuestSelect = Pick<
   QuestRow,
@@ -66,6 +68,7 @@ type QuestSelect = Pick<
   | "goal_id"
   | "completed_at"
   | "created_at"
+  | "sort_order"
 > & { goals: { id: string; title: string } | null };
 
 export function toQuestView(row: QuestSelect, today: GameDate): QuestView {
@@ -86,6 +89,7 @@ export function toQuestView(row: QuestSelect, today: GameDate): QuestView {
     goal: row.goals,
     completedAt: row.completed_at,
     createdAt: row.created_at,
+    sortOrder: row.sort_order,
   };
 }
 
@@ -142,7 +146,7 @@ export async function listQuestlines(
   return data.map((goal) => {
     const steps = (goal.quests as unknown as QuestSelect[])
       .map((q) => toQuestView(q, today))
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.sortOrder - b.sortOrder);
     return {
       id: goal.id,
       title: goal.title,

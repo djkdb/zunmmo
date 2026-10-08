@@ -39,6 +39,9 @@ test("capture signed-in screens", async ({ page }, info) => {
   await page.getByText("바이올렛", { exact: true }).click();
   await shot("03-onboarding");
   await page.getByRole("button", { name: "모험 시작" }).click();
+  await expect(page).toHaveURL(/\/onboarding\/quests/);
+  await shot("03b-starter-quests");
+  await page.getByRole("link", { name: "나중에 고를게요" }).click();
 
   await expect(page).toHaveURL(/\/adventure/);
   await expect(page.locator("main header").filter({ visible: true })).toBeVisible();

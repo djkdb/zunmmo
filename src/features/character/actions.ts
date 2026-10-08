@@ -27,6 +27,8 @@ export async function createCharacter(
   if (error) {
     const code = codeFromDbError(error);
     if (code !== "CHARACTER_EXISTS") return fail(code);
+    redirect("/adventure");
   }
-  redirect("/adventure");
+  // New players pick their first quests from GM templates (GAME_MASTER §5).
+  redirect("/onboarding/quests");
 }

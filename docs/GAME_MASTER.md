@@ -3,7 +3,8 @@
 > Game Master(GM)는 플레이어의 하루를 안내하는 **게임 속 진행자**다. 오늘 할 퀘스트를 골라 주고, 상황에 맞는 한마디를 건네고, 퀘스트를 빠르게 만들 수 있게 돕는다.
 > **LLM(외부 AI API)은 사용하지 않는다.** 모든 판단은 `src/lib/game/`의 결정적 규칙과 템플릿으로 한다.
 
-- 문서 상태: v0.2 — 2026-10-08 결정: Claude API 연동 제외 (복잡도 대비 가치가 낮다는 판단). 이전 LLM 설계는 git 히스토리(commit `270450f`, `docs/AI_GAME_MASTER.md`)에 보존.
+- 문서 상태: v0.3 — Phase 7 구현 완료 (G1–G5).
+- 이전: v0.2 — 2026-10-08 결정: Claude API 연동 제외 (복잡도 대비 가치가 낮다는 판단). 이전 LLM 설계는 git 히스토리(commit `270450f`, `docs/AI_GAME_MASTER.md`)에 보존.
 - 구현 위치: `src/lib/game/recommend.ts`, `src/lib/game/briefing.ts`, `src/lib/game/templates.ts`, `src/features/adventure/`, `src/features/quests/`
 
 ---
@@ -54,6 +55,9 @@ recommendToday({ quests, completionsLast7Days, schedulesToday, capacityMinutes, 
 - 심야(로컬 00–05시) 접속 + 오늘 완료 없음 → 대사 대신 "푹 쉬는 것도 모험의 일부야" (캐릭터 `sleeping`).
 - 문장은 `briefing.ts`의 상수 배열로 관리하고, 테스트가 상황별 선택을 고정한다.
 - 금지 표현 검사: 테스트에서 모든 문장에 "실패·패배·게으" 등이 없는지 확인.
+- 조사는 `josa(word, 받침 있음, 받침 없음)`로 붙인다 ("과제 제출**이**", "중간고사**가**"). 한글로 끝나지 않으면 "이(가)".
+- 상황마다 캐릭터 상태(`mood`)도 정한다: 심야 → sleeping, 보스 당일 → surprised, 보스 임박 → thinking, 연속 → celebrating. 대시보드 캐릭터 헤더가 이를 따른다 (진행 중 → walking, 완료 → celebrating). 아직 그리지 않은 상태는 CharacterSprite의 폴백 체인으로 표시.
+- 미시작 상태에서는 매번 계산해 보여 주고, **START** 시 문장을 `adventures.briefing`에 저장해 그날 내내 같은 문장을 보여 준다.
 
 ## 5. G3 — 퀘스트 템플릿
 
@@ -71,7 +75,9 @@ interface QuestTemplate {
 }
 ```
 - 스탯은 `CATEGORY_STAT[category]`, XP는 `questXp()` — 템플릿에 XP를 적지 않는다.
-- 온보딩 첫 퀘스트 3개는 템플릿에서 고른다.
+- 구현: 31개, 6개 그룹 (`TEMPLATE_GROUPS`: 공부 / 일·프로젝트 / 건강 / 관계 / 취미·휴식 / 생활). main·boss 템플릿은 없다 — 목표는 플레이어 고유의 것이라서.
+- **온보딩** (`/onboarding` → `/onboarding/quests`): 캐릭터를 만든 뒤 템플릿에서 최대 5개를 고른다. 몸·머리·생활 습관 하나씩(`STARTER_TEMPLATE_IDS`: 산책 20분, 책 20쪽 읽기, 방 정리 15분)이 미리 체크되어 있고, 그룹마다 3개만 펼쳐 보인다. "나중에 고를게요"로 건너뛸 수 있다. 만든 퀘스트는 `source = 'template'`.
+- **빠른 추가** (`/quests/new`): "GM 템플릿에서 고르기" 칩 → `?template=<id>`로 폼이 미리 채워진다 (저장 전 수정 가능).
 
 ## 6. G4 — 빠른 추가
 
@@ -82,9 +88,10 @@ interface QuestTemplate {
 
 ## 7. G5 — Questline 단계 입력
 
-- Main Questline 생성 시 "단계"를 줄 단위로 여러 개 입력 → 각 줄이 MAIN 퀘스트.
-- 안내 문구: "첫 단계는 오늘 바로 시작할 수 있을 만큼 작게" (난이도 기본 ⭐2, 이후 ⭐3).
-- 마지막 단계를 BOSS로 지정하는 토글 (마감 필수).
+- 새 Main Questline을 만들 때 퀘스트 이름 = 첫 단계, "이어지는 단계"에 줄 단위로 더 입력 → 각 줄이 MAIN 퀘스트 (최대 10줄).
+- 안내 문구: "첫 단계는 오늘 바로 시작할 수 있을 만큼 작게" — 첫 단계 기본 ⭐2(`QUESTLINE_FIRST_STEP_DIFFICULTY`), 이어지는 단계 ⭐3.
+- "마지막 단계를 BOSS로" 토글: 마지막 줄이 BOSS(⭐4)가 되고 **폼의 마감일이 보스의 마감**이 된다 (첫 단계에는 마감 없음). 마감이 없으면 거절.
+- 모든 단계는 한 번의 INSERT로 저장(전부 성공하거나 전부 실패)하고 `sort_order`로 순서를 지킨다 (같은 `created_at`의 동점 해소 — 다음 단계 판정에도 사용).
 
 ## 8. 다시 LLM을 검토한다면
 

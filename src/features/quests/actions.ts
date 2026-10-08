@@ -14,13 +14,26 @@ import {
   ok,
   withValues,
 } from "@/lib/errors";
-import { type Difficulty, detectLevelUp, goalClearBonus, newlyUnlocked, questXp } from "@/lib/game";
+import {
+  type Difficulty,
+  detectLevelUp,
+  goalClearBonus,
+  DEFAULT_DIFFICULTY,
+  QUESTLINE_NEXT_STEP_DIFFICULTY,
+  newlyUnlocked,
+  questXp,
+  templateById,
+  templateStat,
+} from "@/lib/game";
 import { createClient } from "@/lib/supabase/server";
 
 import {
   type QuestInput,
   QuestInputSchema,
+  MAX_STARTER_QUESTS,
+  QuestlineStepsSchema,
   questFormToObject,
+  stepsFormToObject,
   validateNewDeadline,
 } from "./schemas";
 
@@ -72,17 +85,61 @@ async function saveNewQuest(formData: FormData): Promise<QuestFormState> {
   const deadlineError = validateNewDeadline(parsed.data, playerToday(player));
   if (deadlineError) return fail("VALIDATION_FAILED", deadlineError);
 
+  const steps = questlineSteps(parsed.data, formData);
+  if ("error" in steps) return steps.error;
+
   const supabase = await createClient();
   const goal = await resolveGoalId(supabase, parsed.data);
   if ("error" in goal) return goal.error;
 
-  const { data, error } = await supabase
-    .from("quests")
-    .insert(toRow(parsed.data, goal.goalId))
-    .select("id")
-    .single();
-  if (error) return fail(codeFromDbError(error));
-  redirect(`/quests?created=${data.id}`);
+  // One insert for the whole questline so either every step lands or none does.
+  const rows = [steps.first, ...steps.extra].map((input, i) => ({
+    ...toRow(input, goal.goalId),
+    sort_order: i,
+  }));
+  const { data, error } = await supabase.from("quests").insert(rows).select("id");
+  if (error || !data[0]) return fail(codeFromDbError(error));
+  redirect(`/quests?created=${data[0].id}`);
+}
+
+/**
+ * G5: a new questline may come with more steps, one per line. The first step keeps the
+ * form's values; with "마지막 단계를 BOSS로" the form's deadline moves to the final boss.
+ */
+function questlineSteps(
+  first: QuestInput,
+  formData: FormData,
+): { first: QuestInput; extra: QuestInput[] } | { error: QuestFormState } {
+  if (first.type !== "main" || !first.newGoalTitle) return { first, extra: [] };
+  const parsed = QuestlineStepsSchema.safeParse(stepsFormToObject(formData));
+  if (!parsed.success) {
+    return { error: fail("VALIDATION_FAILED", { steps: parsed.error.issues[0]!.message }) };
+  }
+  const { steps, lastIsBoss } = parsed.data;
+  if (lastIsBoss && !steps.length) {
+    return {
+      error: fail("VALIDATION_FAILED", {
+        steps: "보스로 만들 마지막 단계를 한 줄 이상 적어 주세요.",
+      }),
+    };
+  }
+  if (lastIsBoss && !first.deadline) {
+    return { error: fail("VALIDATION_FAILED", { deadline: "보스 단계에는 마감일이 필요해요." }) };
+  }
+
+  const extra: QuestInput[] = steps.map((title, i) => {
+    const isBoss = lastIsBoss && i === steps.length - 1;
+    return {
+      ...first,
+      title,
+      description: null,
+      type: isBoss ? "boss" : "main",
+      difficulty: isBoss ? DEFAULT_DIFFICULTY.boss : QUESTLINE_NEXT_STEP_DIFFICULTY,
+      deadline: isBoss ? first.deadline : null,
+      estimatedMinutes: null,
+    };
+  });
+  return { first: lastIsBoss ? { ...first, deadline: null } : first, extra };
 }
 
 export async function updateQuest(
@@ -216,4 +273,36 @@ export async function uncompleteQuest(
   const { data, error } = await supabase.rpc("uncomplete_quest", { p_quest_id: questId });
   if (error) return fail(codeFromDbError(error));
   return ok({ xpChange: data.xp_change ?? 0, totalXpAfter: Number(data.total_xp_after) });
+}
+
+// ───────── templates (GAME_MASTER §5) ─────────
+
+/** Onboarding: turn the picked templates into quests, then open the adventure. */
+export async function createQuestsFromTemplates(
+  _prev: QuestFormState,
+  formData: FormData,
+): Promise<QuestFormState> {
+  await requireCharacter();
+  const ids = [...new Set(formData.getAll("template").map(String))].slice(0, MAX_STARTER_QUESTS);
+  const rows = [];
+  for (const id of ids) {
+    const template = templateById(id);
+    if (!template) continue;
+    const parsed = QuestInputSchema.safeParse({
+      title: template.title,
+      type: template.type,
+      difficulty: template.difficulty,
+      primaryStat: templateStat(template),
+      estimatedMinutes: template.estimatedMinutes ?? null,
+      repeat: template.repeat ?? null,
+    });
+    if (!parsed.success) return fail("VALIDATION_FAILED");
+    rows.push({ ...toRow(parsed.data, null), source: "template" as const });
+  }
+  if (rows.length) {
+    const supabase = await createClient();
+    const { error } = await supabase.from("quests").insert(rows);
+    if (error) return fail(codeFromDbError(error));
+  }
+  redirect("/adventure");
 }

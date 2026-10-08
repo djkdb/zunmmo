@@ -97,14 +97,14 @@
 
 **Exit** (통과): E2E — 오늘의 모험 시작→완료, 일정 추가(검증 오류 후 재제출)·마감 표시·월간 뷰·삭제 / DB 테스트 28 / axe 0 (캘린더 포함)
 
-## Phase 7 — Game Master (규칙 기반)
+## Phase 7 — Game Master (규칙 기반) ✅
 > 2026-10-08 결정: Claude API(LLM) 연동 제외. GM은 결정적 규칙 + 템플릿 ([GAME_MASTER](./GAME_MASTER.md)).
-- GM 브리핑 (상황 판정 + 문장 템플릿, 날짜 기반 결정적 선택)
-- 퀘스트 템플릿 30개 내외 (카테고리별), 온보딩 첫 퀘스트 선택
-- 빠른 추가: 날짜 칩, 타입별 기본값
-- Questline 생성 시 단계 여러 줄 입력
+- [x] GM 브리핑 (상황 판정 + 문장 풀, 날짜 기반 결정적 선택, 조사 처리, 캐릭터 mood) — 대시보드·`adventures.briefing`
+- [x] 퀘스트 템플릿 31개 (6개 그룹), 온보딩 첫 퀘스트 선택 단계, 빠른 추가 템플릿 칩
+- [x] 빠른 추가: 날짜 칩, 타입별 기본값 (Phase 4에서 구현)
+- [x] Questline 생성 시 단계 여러 줄 입력 + 마지막 BOSS 토글
 
-**Exit**: 템플릿만으로 온보딩 → 첫 XP까지 3분 이내, 브리핑/추천 로직 단위 테스트
+**Exit** (통과): E2E — 템플릿 온보딩 → 첫 XP (3분 제한 단언), 템플릿 프리필, 단계 입력 + 보스 / 브리핑·템플릿·추천 단위 테스트
 
 ## Phase 8 — Animation + Pixel Polish
 - 캐릭터 상태: walking, studying, working, exercising, celebrating, sleeping, level-up
