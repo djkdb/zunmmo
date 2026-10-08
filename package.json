@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "format:check": "prettier --check .",
     "art:build": "tsx scripts/art/build.ts",
     "art:check": "tsx scripts/art/check.ts",
     "db:start": "supabase start -x studio,imgproxy,realtime,storage-api,edge-runtime,logflare,vector,supavisor,postgres-meta",

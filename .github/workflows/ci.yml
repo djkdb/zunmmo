@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck · lint · unit · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Local-stack defaults only (public values); production secrets live in Vercel.
+      - run: cp .env.example .env.local
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm art:check
+      # DB tests skip themselves here — the e2e job runs them against a real stack.
+      - run: pnpm test
+      - run: pnpm build
+
+  e2e:
+    name: DB tests · e2e (production build)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env.local
+      - name: Start local Supabase (Postgres, Auth, Mailpit)
+        run: pnpm db:start
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: DB tests (RLS, RPCs, ledger)
+        run: pnpm test supabase/tests
+      - run: pnpm build
+      - name: E2E against next start
+        run: pnpm test:e2e
+        env:
+          E2E_PROD: "1"
+          CI: "true"
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
