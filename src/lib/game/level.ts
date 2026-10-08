@@ -2,8 +2,7 @@ import { sanitizeXp } from "./types";
 
 /** GAME_SYSTEM §4 — swappable level curve. Levels are derived from total XP, never stored. */
 export type LevelCurve =
-  | { kind: "linear"; step: number }
-  | { kind: "polynomial"; base: number; exponent: number };
+  { kind: "linear"; step: number } | { kind: "polynomial"; base: number; exponent: number };
 
 export const LEVEL_CURVE: LevelCurve = { kind: "linear", step: 1000 };
 export const MAX_LEVEL = 99;

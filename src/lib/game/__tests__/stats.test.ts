@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { CATEGORY_STAT, QUEST_CATEGORIES, statLevel, statProgress, statXpToReachLevel } from "../stats";
+import {
+  CATEGORY_STAT,
+  QUEST_CATEGORIES,
+  statLevel,
+  statProgress,
+  statXpToReachLevel,
+} from "../stats";
 import { isStat } from "../types";
 
 describe("statLevel", () => {

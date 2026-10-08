@@ -20,19 +20,28 @@ const eslintConfig = defineConfig([
     // Game rules are pure TypeScript: no React, Next, Supabase or app code.
     files: ["src/lib/game/**"],
     rules: restrict([
-      { group: ["react", "react-dom", "next", "next/*", "@supabase/*", "@/*", "!@/lib/game/*"], message: "lib/game must stay framework-free." },
+      {
+        group: ["react", "react-dom", "next", "next/*", "@supabase/*", "@/*", "!@/lib/game/*"],
+        message: "lib/game must stay framework-free.",
+      },
     ]),
   },
   {
     files: ["src/components/**"],
     rules: restrict([
-      { group: ["@/features/*", "@/app/*"], message: "Components must not depend on features or routes." },
+      {
+        group: ["@/features/*", "@/app/*"],
+        message: "Components must not depend on features or routes.",
+      },
     ]),
   },
   {
     files: ["src/components/pixel/**", "src/components/ui/**"],
     rules: restrict([
-      { group: ["@/components/game/*", "@/features/*", "@/app/*"], message: "Primitives must not depend on game components." },
+      {
+        group: ["@/components/game/*", "@/features/*", "@/app/*"],
+        message: "Primitives must not depend on game components.",
+      },
     ]),
   },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "coverage/**"]),

@@ -369,7 +369,7 @@ export const ICONS = {
 
 /** 8×8 inline glyphs (difficulty stars). */
 export const GLYPHS = {
-  "star": [
+  star: [
     "...OO...",
     "..OyYO..",
     "OOOyYOOO",

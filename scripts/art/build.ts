@@ -18,14 +18,7 @@ import { ADVENTURER } from "../../art/characters/adventurer";
 import { GLYPHS, ICONS } from "../../art/icons";
 import { LIFE_32, OUTFIT_PRESETS, type OutfitPreset } from "../../art/palette";
 import type { PixelGrid } from "../../art/types";
-import {
-  createCanvas,
-  cropGrid,
-  drawGrid,
-  encodePng,
-  padGrid,
-  validateGrid,
-} from "./lib";
+import { createCanvas, cropGrid, drawGrid, encodePng, padGrid, validateGrid } from "./lib";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const ICON_SIZE = 16;
