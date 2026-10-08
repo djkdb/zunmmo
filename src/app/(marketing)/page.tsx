@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
+import { FarewellNotice } from "@/features/landing/components/FarewellNotice";
 import { FinalCta } from "@/features/landing/components/FinalCta";
 import { Hero } from "@/features/landing/components/Hero";
 import { HowToPlay } from "@/features/landing/components/HowToPlay";
@@ -16,6 +18,9 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <>
+      <Suspense fallback={null}>
+        <FarewellNotice />
+      </Suspense>
       <SiteHeader />
       <main>
         <Hero />
