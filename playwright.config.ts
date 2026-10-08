@@ -27,8 +27,13 @@ export default defineConfig({
   ],
   webServer: {
     // E2E_PROD=1 runs against `next start` (run `pnpm build` first) — streaming and route
-    // transitions differ from dev, so release checks should use it.
-    command: process.env.E2E_PROD ? `pnpm start --port ${PORT}` : `pnpm dev --port ${PORT}`,
+    // transitions differ from dev, so release checks should use it. E2E_CF=1 runs against the
+    // Cloudflare Workers runtime locally (run `pnpm cf:build` first; docs/DEPLOY.md §6).
+    command: process.env.E2E_CF
+      ? `pnpm exec opennextjs-cloudflare preview --port ${PORT}`
+      : process.env.E2E_PROD
+        ? `pnpm start --port ${PORT}`
+        : `pnpm dev --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

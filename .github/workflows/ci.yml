@@ -31,6 +31,28 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  cloudflare:
+    name: Cloudflare Workers build (OpenNext)
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env.local
+      - run: pnpm cf:build
+      # Workers limit the gzipped upload: 3 MiB on Free, 10 MiB on Paid (docs/DEPLOY.md §6).
+      - name: Worker size
+        run: |
+          out=$(pnpm exec wrangler deploy --dry-run --outdir .wrangler/dry-run 2>&1)
+          kib=$(echo "$out" | sed -n 's/.*gzip: \([0-9.]*\) KiB.*/\1/p')
+          echo "Worker gzip size: ${kib} KiB"
+          awk -v k="$kib" 'BEGIN { if (k > 3072) print "::warning::Over the Workers Free plan limit (3 MiB): " k " KiB"; exit (k > 10240) }'
+
   e2e:
     name: DB tests · e2e (production build)
     needs: check

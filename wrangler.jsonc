@@ -1,0 +1,21 @@
+// Cloudflare Workers deployment via OpenNext (docs/DEPLOY.md §6). Vercel stays the primary
+// target; this file is only read by `pnpm cf:*` and Workers Builds.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "life-rpg",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "services": [
+    {
+      // Self-reference for OpenNext's cache; must match "name" above.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "life-rpg",
+    },
+  ],
+  "observability": { "enabled": true },
+}
