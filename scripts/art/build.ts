@@ -9,6 +9,7 @@
  *   src/components/game/character/sprite-sheets.generated.ts
  *   src/components/pixel/icons.generated.ts
  *   src/app/icon.png                               32×32 favicon (head crop, 2×)
+ *   public/icons/app-{192,512}.png, src/app/apple-icon.png   opaque app icons (PWA)
  *   art/palette/life-32.gpl                        Aseprite/GIMP palette
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -95,6 +96,39 @@ export type SpriteSheetId = keyof typeof SPRITE_SHEETS;
   const favicon = createCanvas(32, 32);
   drawGrid(favicon, head, 0, 0, { preset: "royal", scale: 2 });
   write("src/app/icon.png", encodePng(favicon));
+
+  // App icons (PWA, home screen): the same head on an opaque ink-800 tile. The 16-unit head
+  // sits in a 24-unit tile so it stays inside the maskable safe zone (central 80%).
+  const tile = Array.from({ length: 24 }, () => "n".repeat(24));
+  const appArt = head.reduce<string[]>(
+    (rows, line, y) =>
+      rows.map((row, ry) =>
+        ry === y + 4
+          ? row.slice(0, 4) +
+            [...line].map((c, x) => (c === "." ? row[4 + x] : c)).join("") +
+            row.slice(20)
+          : row,
+      ),
+    tile,
+  );
+  for (const [file, size] of [
+    ["public/icons/app-192.png", 192],
+    ["public/icons/app-512.png", 512],
+    ["src/app/apple-icon.png", 192],
+  ] as const) {
+    // Integer scale only; any remainder becomes an even ink-800 margin.
+    const scale = Math.floor(size / 24);
+    const offset = (size - 24 * scale) / 2;
+    const canvas = createCanvas(size, size);
+    drawGrid(
+      canvas,
+      Array.from({ length: size }, () => "n".repeat(size)),
+      0,
+      0,
+    );
+    drawGrid(canvas, appArt, offset, offset, { preset: "royal", scale });
+    write(file, encodePng(canvas));
+  }
 }
 
 /* ───────── Icons & glyphs ───────── */
