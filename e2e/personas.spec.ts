@@ -115,6 +115,12 @@ test.describe("mobile personas", () => {
     await expect(panel).toContainText("추천 퀘스트 1개");
     await expect(panel).toContainText("운영체제 과제 제출");
     await expect(panel).toContainText("오늘은 가볍게 1시간 안쪽으로만");
+    // Three late nights this week: the GM suggests moving the day start instead of nagging.
+    await expect(panel).toContainText("새벽에 자주 모험하네요");
+    await expect(panel.getByRole("link", { name: "하루 시작 시각" })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
     // The exam is prepared for, not "done" three days early.
     await expect(panel).not.toContainText("자료구조 중간고사");
     // Boss HP: readiness from the questline's prep steps.
@@ -335,13 +341,20 @@ test.describe("desktop personas", () => {
         { title: "점심 미팅", dayOffset: 0, start: "12:30", end: "13:30" },
         { title: "C사 주간 싱크", dayOffset: 0, start: "16:00", end: "17:00" },
         { title: "A사 피드백 콜", dayOffset: 1, start: "10:00", end: "11:00" },
+        {
+          title: "데일리 스탠드업",
+          dayOffset: -3,
+          start: "08:45",
+          end: "09:00",
+          weekdays: [1, 2, 3, 4, 5, 6, 7],
+        },
       ],
     });
     j.note("4.5h of meetings today against a 4h capacity; boss due tomorrow (180 min)");
     await page.goto("/adventure");
     await j.capture("dashboard");
     const panel = adventurePanel(page);
-    await expect(panel).toContainText("오늘 일정 4개(4시간 30분)를 빼고");
+    await expect(panel).toContainText("오늘 일정 5개(4시간 45분)를 빼고");
     // The boss is due tomorrow, and the 15-minute quests still fit between meetings.
     await expect(panel).toContainText("클라이언트 A 시안 2종");
     await expect(panel).toContainText("견적서 보내기");
@@ -352,6 +365,10 @@ test.describe("desktop personas", () => {
     await visible(page).getByRole("button", { name: "퀘스트 완료: 크로키 15분" }).click();
     await expect(visible(page).getByText("크로키 15분 완료 +20 XP")).toBeVisible();
     await j.capture("completed-from-calendar");
+    // A daily standup is one weekly series: it shows as such and edits from the agenda.
+    await expect(visible(page).getByRole("region", { name: /오늘/ })).toContainText("매일");
+    await visible(page).getByRole("link", { name: "데일리 스탠드업" }).click();
+    await expect(visible(page).getByText(/매일 반복 일정이에요/)).toBeVisible();
   });
 
   test("P5 하늘 — keyboard and screen reader, eight daily routines", async ({ browser }) => {
