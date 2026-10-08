@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { QuestTypeTag } from "@/components/game/QuestTypeTag";
 import { EmptyState } from "@/components/game/EmptyState";
+import { QuestAction } from "@/features/quests/components/QuestAction";
 import { Button } from "@/components/ui/Button";
 import { type GameDate, isoWeekday, weekdayLabel } from "@/lib/game";
 import { formatGameDate, formatXpGain } from "@/lib/utils/format";
@@ -27,6 +28,8 @@ export function DayAgenda({
     !items.dailies.length &&
     !items.schedules.length &&
     !items.completed.length;
+  // Completion always lands on today's game date, so only today's agenda can complete.
+  const isToday = date === today;
   const heading = `${formatGameDate(date)} (${weekdayLabel(isoWeekday(date))})${date === today ? " · 오늘" : ""}`;
 
   return (
@@ -63,6 +66,7 @@ export function DayAgenda({
                     <span className="text-caption text-text-muted">
                       마감 · {formatXpGain(q.xp)}
                     </span>
+                    {isToday && <QuestAction quest={q} doneToday={false} />}
                   </AgendaRow>
                 ))}
                 {allDay.map((s) => (
@@ -81,6 +85,7 @@ export function DayAgenda({
                     >
                       {q.title}
                     </Link>
+                    {isToday && <QuestAction quest={q} doneToday={false} />}
                   </AgendaRow>
                 ))}
               </ul>
@@ -135,6 +140,7 @@ export function DayAgenda({
                     <span className="pixel-marker" data-kind="done" aria-hidden />
                     <span className="min-w-0 flex-1 truncate text-text-secondary">{q.title}</span>
                     <span className="font-pixel text-pixel text-xp-text">{formatXpGain(q.xp)}</span>
+                    {isToday && <QuestAction quest={q} doneToday />}
                   </AgendaRow>
                 ))}
               </ul>
