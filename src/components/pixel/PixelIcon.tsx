@@ -2,9 +2,10 @@ import type { CSSProperties } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
+import type { PixelScale } from "./scale";
 import { GLYPH_ATLAS, type GlyphName, ICON_ATLAS, type IconName } from "./icons.generated";
 
-export type PixelScale = 2 | 3 | 4 | 5 | 6;
+export type { PixelScale } from "./scale";
 
 type Atlas = typeof ICON_ATLAS | typeof GLYPH_ATLAS;
 

@@ -5,6 +5,7 @@ import "./globals.css";
 import { galmuri } from "./fonts";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
     default: "LIFE RPG",
     template: "%s · LIFE RPG",

@@ -180,6 +180,8 @@
 | ink-950 / emerald-400 · teal-400 · violet-400 · crimson-400 | 8.59 · 8.24 · 5.41 · 5.58 | 퀘스트 타입 배지 위 텍스트 AA+ |
 | ink-900 / parchment-100 (라이트 본문) | 16.17 | AAA |
 | parchment-700 / parchment-100 | 5.37 | AA |
+| parchment-900 / parchment-300 (양피지 노트 위 보조 텍스트) | 7.27 | AAA |
+| parchment-700 / parchment-300 | 4.18 | **텍스트 금지** — parchment-300 위 보조 텍스트는 parchment-900 |
 | royal-600 / parchment-100 | 6.90 | AA |
 | crimson-500 / parchment-100 | 4.54 | AA |
 | ink-600 / ink-900 | 1.62 | **장식 전용** — 의미 있는 경계에 사용 금지 |

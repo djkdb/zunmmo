@@ -195,6 +195,7 @@ art/                                        # 원본 (git 포함, 앱 번들에�
   palette.ts                                # LIFE-32 + 의상 팔레트 스왑 프리셋
   characters/adventurer.ts                  # 32×32 프레임, 상태별 프레임/지속시간
   icons.ts                                  # 16×16 아이콘, 8×8 글리프
+  scene.ts                                  # 장면 소품 (게시판, 랜턴, 달, 덤불, 지면 타일, "!" 마커)
   palette/life-32.gpl                       # (생성) Aseprite/GIMP 팔레트
 scripts/art/build.ts                        # pnpm art:build
 scripts/art/check.ts                        # pnpm art:check — 팔레트/알파 검사
@@ -204,8 +205,12 @@ public/
 src/components/game/character/sprite-sheets.generated.ts   # (생성) 시트 메타데이터
 src/components/pixel/icons.generated.ts                    # (생성) 아이콘 이름 타입 + 좌표
 src/app/icon.png                                           # (생성) 32×32 파비콘 (머리 크롭 2×)
+public/sprites/scene/*.png + src/components/pixel/scene-sprites.generated.ts   # (생성) 장면 소품
+src/app/_og/og-scene.png                                   # (생성) OG 배경 200×105ap를 정확히 6× (1200×630)
 ```
 
 - 생성 파일은 커밋하되 손으로 고치지 않는다. 원본 수정 → `pnpm art:build` → 결과 PNG를 `/styleguide`에서 2×/3×/4×로 확인.
 - Aseprite로 작업해도 된다: `life-32.gpl`을 불러와 그리고, 결과를 그리드 원본으로 옮긴다(변환 스크립트는 필요해지면 추가).
+- 반응형 장면은 `scale="inherit"` + `.pixel-scale-responsive`(3×/4×/5×)로 한 요소의 배율을 CSS 변수로 바꾼다. 위치·크기는 `ap(n)`(art pixel) 단위로만 지정하고, %·중앙 정렬은 CSS `round()`로 배율 단위에 스냅한다.
+- OG 이미지는 예외적으로 6× 사전 확대 PNG를 쓴다 (`ImageResponse`가 리샘플링 없이 그대로 쓰도록). 텍스트는 Galmuri 72/36px.
 - 출력은 1× RGBA PNG, 무손실. 이름은 `kebab-case`, 상태 키는 CHARACTER_GUIDE §5의 이름(`idle`, `level-up` …).

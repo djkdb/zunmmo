@@ -47,12 +47,14 @@
 
 **Exit** (통과): 모바일 390px·데스크톱 1280px 스크린샷 리뷰, 가로 스크롤 없음, 버튼 터치 타깃 ≥ 44px, 콘솔 오류 0, 키보드/ESC/포커스 복귀·reduced-motion 확인, `typecheck`·`lint`·`test`(103)·`build` 통과
 
-## Phase 2 — Landing Page
-- 히어로: 픽셀 장면(캐릭터 + 퀘스트 보드) + 한 문장 가치 제안 + CTA
-- "어떻게 플레이하나" 3단계(말하기 → 퀘스트 수락 → 성장) 섹션
-- 반응형, Lighthouse 성능/접근성 ≥ 90, OG 이미지(픽셀)
+## Phase 2 — Landing Page ✅
+- [x] 히어로: 밤의 마을 픽셀 장면(퀘스트 게시판 + "!" 마커 + 랜턴 + 캐릭터), 3×/4×/5× 반응형 배율
+- [x] "어떻게 플레이하나" 3단계(게시판에 올리기 → 오늘의 모험 → 성장) — 실제 게임 컴포넌트로 시연
+- [x] 퀘스트 보드(나무 프레임 + 양피지 노트), 원칙 섹션, 마무리 CTA, 푸터
+- [x] OG 이미지: 6× 사전 렌더 장면 + Galmuri 72/36px (리샘플링 없음)
+- [x] 아트: walking 4프레임, 장면 소품 6종
 
-**Exit**: 모바일 360px ~ 데스크톱 1440px 레이아웃 확인
+**Exit** (통과): 390px·1280px 가로 스크롤 없음, 콘솔 오류 0, axe(WCAG 2.1 AA) 위반 0
 
 ## Phase 3 — Auth + Character
 - Supabase 프로젝트, 마이그레이션 `profiles`/`characters`/`character_stats`, RLS

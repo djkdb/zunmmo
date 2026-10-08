@@ -5,7 +5,7 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/lib/hooks/use-reduced-motion";
 import { cn } from "@/lib/utils/cn";
 
-import type { PixelScale } from "./PixelIcon";
+import { type ScaleProp, ap } from "./scale";
 
 export interface SpriteAnimation {
   /** Row in the sheet. */
@@ -21,7 +21,8 @@ interface SpriteProps {
   frameSize: { readonly w: number; readonly h: number };
   sheetSize: { readonly w: number; readonly h: number };
   animation: SpriteAnimation;
-  scale?: PixelScale;
+  /** Integer scale, or "inherit" to follow the `--pixel-scale` CSS variable. */
+  scale?: ScaleProp;
   /** Freeze on the first frame. Forced on when the user prefers reduced motion. */
   paused?: boolean;
   /** Called once when a non-looping animation finishes. */
@@ -74,11 +75,11 @@ export function Sprite({
 
   const shown = frozen ? 0 : frame;
   const style: CSSProperties = {
-    width: frameSize.w * scale,
-    height: frameSize.h * scale,
+    width: ap(frameSize.w, scale),
+    height: ap(frameSize.h, scale),
     backgroundImage: `url(${src})`,
-    backgroundSize: `${sheetSize.w * scale}px ${sheetSize.h * scale}px`,
-    backgroundPosition: `-${shown * frameSize.w * scale}px -${row * frameSize.h * scale}px`,
+    backgroundSize: `${ap(sheetSize.w, scale)} ${ap(sheetSize.h, scale)}`,
+    backgroundPosition: `${ap(-shown * frameSize.w, scale)} ${ap(-row * frameSize.h, scale)}`,
     backgroundRepeat: "no-repeat",
   };
 

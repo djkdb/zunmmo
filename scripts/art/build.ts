@@ -17,6 +17,7 @@ import { dirname, join } from "node:path";
 import { ADVENTURER } from "../../art/characters/adventurer";
 import { GLYPHS, ICONS } from "../../art/icons";
 import { LIFE_32, OUTFIT_PRESETS, type OutfitPreset } from "../../art/palette";
+import { SCENE_SPRITES } from "../../art/scene";
 import type { PixelGrid } from "../../art/types";
 import { createCanvas, cropGrid, drawGrid, encodePng, padGrid, validateGrid } from "./lib";
 
@@ -137,6 +138,85 @@ export type GlyphName = (typeof GLYPH_ATLAS.names)[number];
   );
 }
 
+/* ───────── Scene props ───────── */
+
+function buildScene() {
+  const manifest: Record<string, { src: string; w: number; h: number }> = {};
+  for (const [name, grid] of Object.entries(SCENE_SPRITES)) {
+    const size = { w: grid[0]?.length ?? 0, h: grid.length };
+    if (size.w % 16 !== 0 || size.h % 16 !== 0) {
+      throw new Error(`scene.${name}: ${size.w}×${size.h} is not a multiple of the 16ap tile`);
+    }
+    validateGrid(`scene.${name}`, grid, size);
+    const canvas = createCanvas(size.w, size.h);
+    drawGrid(canvas, grid, 0, 0);
+    const file = `/sprites/scene/${name}.png`;
+    write(join("public", file), encodePng(canvas));
+    manifest[name] = { src: file, ...size };
+  }
+  write(
+    "src/components/pixel/scene-sprites.generated.ts",
+    `${GENERATED_HEADER}
+export const SCENE_SPRITES = ${JSON.stringify(manifest, null, 2)} as const;
+
+export type SceneSpriteName = keyof typeof SCENE_SPRITES;
+`,
+  );
+}
+
+/* ───────── Open Graph background ───────── */
+
+/**
+ * 200×105ap night scene rendered at exactly 6× → 1200×630, so the OG image needs no
+ * resampling. Text is drawn on top by src/app/opengraph-image.tsx.
+ */
+function buildOgScene() {
+  const W = 200;
+  const H = 105;
+  const SCALE = 6;
+  const rowsOf = (fill: string) => Array.from({ length: H }, () => fill.repeat(W).split(""));
+  const scene = rowsOf("O");
+  const stamp = (grid: PixelGrid, x: number, y: number, preset?: OutfitPreset) => {
+    grid.forEach((row, gy) =>
+      [...row].forEach((code, gx) => {
+        if (code === "." || y + gy >= H || x + gx >= W) return;
+        const slot = ["1", "2", "3"].indexOf(code);
+        scene[y + gy]![x + gx] = slot >= 0 && preset ? OUTFIT_PRESETS[preset][slot]! : code;
+      }),
+    );
+  };
+  for (const [x, y, c] of [
+    [12, 8, "w"],
+    [40, 22, "y"],
+    [70, 6, "w"],
+    [96, 30, "w"],
+    [118, 12, "y"],
+    [140, 26, "w"],
+    [176, 40, "w"],
+    [190, 18, "y"],
+    [58, 40, "w"],
+    [26, 52, "w"],
+  ] as const) {
+    scene[y]![x] = c;
+  }
+  stamp(SCENE_SPRITES.moon, 160, 8);
+  const ground = SCENE_SPRITES.ground;
+  for (let x = 0; x < W; x += 16) stamp(ground, x, H - 16);
+  const stand = H - 16 + 3; // props stand 3ap into the ground strip
+  stamp(SCENE_SPRITES.bush, 92, stand - 16);
+  stamp(SCENE_SPRITES["quest-board"], 106, stand - 32);
+  stamp(SCENE_SPRITES["quest-marker"], 114, stand - 32 - 15);
+  stamp(ADVENTURER.states.idle.frames[0]!, 138, stand - 31, "royal");
+  stamp(SCENE_SPRITES.lantern, 170, stand - 32);
+  stamp(SCENE_SPRITES.bush, 184, stand - 16);
+
+  const grid = scene.map((row) => row.join(""));
+  validateGrid("og-scene", grid, { w: W, h: H });
+  const canvas = createCanvas(W * SCALE, H * SCALE);
+  drawGrid(canvas, grid, 0, 0, { scale: SCALE });
+  write("src/app/_og/og-scene.png", encodePng(canvas));
+}
+
 /* ───────── Palette ───────── */
 
 function buildPalette() {
@@ -154,5 +234,7 @@ function buildPalette() {
 console.log("Building pixel art…");
 buildCharacter();
 buildIcons();
+buildScene();
+buildOgScene();
 buildPalette();
 console.log("Done.");

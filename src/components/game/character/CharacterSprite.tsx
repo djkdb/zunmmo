@@ -1,6 +1,6 @@
 "use client";
 
-import { type PixelScale } from "@/components/pixel/PixelIcon";
+import { type ScaleProp, ap } from "@/components/pixel/scale";
 import { Sprite } from "@/components/pixel/Sprite";
 import { cn } from "@/lib/utils/cn";
 
@@ -61,7 +61,8 @@ export function resolveCharacterState(state: CharacterState): DrawnState {
 interface CharacterSpriteProps {
   outfit: OutfitPreset;
   state?: CharacterState;
-  scale?: PixelScale;
+  /** Integer scale, or "inherit" to follow `--pixel-scale`. */
+  scale?: ScaleProp;
   /** Accessible name, e.g. "성준의 캐릭터". */
   label: string;
   /** Pixel ground shadow under the feet. */
@@ -88,13 +89,15 @@ export function CharacterSprite({
       {shadow && (
         <span
           aria-hidden
-          className="absolute left-1/2 -translate-x-1/2 bg-ink-950/40"
+          className="absolute bg-ink-950/40"
           style={{
-            // 16×2ap ellipse with notched ends, sitting on the feet baseline (CHARACTER_GUIDE §2)
-            width: 16 * scale,
-            height: 2 * scale,
-            top: (SHEET.anchor.y - 0.5) * scale,
-            clipPath: `polygon(${2 * scale}px 0, calc(100% - ${2 * scale}px) 0, 100% 50%, calc(100% - ${2 * scale}px) 100%, ${2 * scale}px 100%, 0 50%)`,
+            // 16×2ap shadow with notched ends under the feet baseline (CHARACTER_GUIDE §2).
+            // Whole-ap offsets only, so the shadow never lands on a half pixel.
+            left: ap(8, scale),
+            top: ap(SHEET.anchor.y - 1, scale),
+            width: ap(16, scale),
+            height: ap(2, scale),
+            clipPath: `polygon(${ap(2, scale)} 0, calc(100% - ${ap(2, scale)}) 0, 100% 50%, calc(100% - ${ap(2, scale)}) 100%, ${ap(2, scale)} 100%, 0 50%)`,
           }}
         />
       )}

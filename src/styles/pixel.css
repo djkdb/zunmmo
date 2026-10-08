@@ -298,6 +298,36 @@
     animation: pixel-skeleton-step 1600ms steps(1, end) infinite;
   }
 
+  /* ───────── Scenes ───────── */
+
+  /* Responsive art scale for scenes: 3× mobile, 4× from md, 5× from lg (PIXEL_RULES §1.2). */
+  .pixel-scale-responsive {
+    --pixel-scale: 3;
+  }
+  @media (min-width: 48rem) {
+    .pixel-scale-responsive {
+      --pixel-scale: 4;
+    }
+  }
+  @media (min-width: 64rem) {
+    .pixel-scale-responsive {
+      --pixel-scale: 5;
+    }
+  }
+
+  /* 1ap vertical bob in two steps (quest marker). */
+  .pixel-bob {
+    animation: pixel-bob 1200ms steps(1, end) infinite;
+  }
+  /* Stepped on/off twinkle (stars). */
+  .pixel-twinkle {
+    animation: pixel-twinkle 2400ms steps(1, end) infinite;
+  }
+  /* Lantern light: three stepped brightness levels, never a smooth fade. */
+  .pixel-flicker {
+    animation: pixel-flicker 1800ms steps(1, end) infinite;
+  }
+
   /* ───────── Pixel text ───────── */
 
   .font-pixel {
@@ -316,6 +346,39 @@
   }
 }
 
+@keyframes pixel-bob {
+  50% {
+    transform: translateY(calc(-1px * var(--pixel-scale, 4)));
+  }
+}
+
+@keyframes pixel-twinkle {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.35;
+  }
+  85% {
+    opacity: 1;
+  }
+}
+
+@keyframes pixel-flicker {
+  0% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.8;
+  }
+  55% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+}
+
 @keyframes pixel-skeleton-step {
   0% {
     background-color: var(--color-surface);
@@ -330,7 +393,10 @@
     transition: none;
   }
   .pixel-spinner > [aria-hidden],
-  .pixel-skeleton {
+  .pixel-skeleton,
+  .pixel-bob,
+  .pixel-twinkle,
+  .pixel-flicker {
     animation: none;
   }
   .pixel-spinner > [aria-hidden] {

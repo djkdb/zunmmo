@@ -13,7 +13,7 @@ export const SPRITE_SHEETS = {
     },
     "sheetSize": {
       "w": 128,
-      "h": 32
+      "h": 64
     },
     "images": {
       "royal": "/sprites/characters/adventurer-royal.png",
@@ -30,6 +30,17 @@ export const SPRITE_SHEETS = {
           220,
           420,
           220
+        ],
+        "loop": true
+      },
+      "walking": {
+        "row": 1,
+        "frames": 4,
+        "durations": [
+          150,
+          150,
+          150,
+          150
         ],
         "loop": true
       }

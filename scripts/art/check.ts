@@ -11,7 +11,7 @@ import { join, relative } from "node:path";
 import { PALETTE_KEYS, decodePng } from "./lib";
 
 const ROOT = join(import.meta.dirname, "..", "..");
-const TARGETS = ["public/sprites", "public/icons", "src/app/icon.png"];
+const TARGETS = ["public/sprites", "public/icons", "src/app/icon.png", "src/app/_og"];
 
 function* pngFiles(path: string): Generator<string> {
   const stat = statSync(path, { throwIfNoEntry: false });
