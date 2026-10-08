@@ -15,6 +15,7 @@ import { PixelFrame } from "@/components/pixel/PixelFrame";
 import { selectBoard } from "@/features/adventure/board";
 import { AdventureSkeleton } from "@/features/adventure/components/AdventureSkeleton";
 import { type AdventureStep, TodayAdventure } from "@/features/adventure/components/TodayAdventure";
+import { adventureMood } from "@/features/adventure/mood";
 import { getAdventure } from "@/features/adventure/queries";
 import { completionWindowStart, planToday } from "@/features/adventure/recommendation";
 import { SectionHeader } from "@/features/adventure/components/SectionHeader";
@@ -281,8 +282,7 @@ async function todayPanel(
           .map((c) => ({ quest: byId.get(c.questId)!, minutes: c.minutes })),
         full: steps.length >= MAX_PICKS,
       },
-      // On the way to the next step; a book in hand when that step grows INT (CHARACTER_GUIDE §5).
-      mood: steps.find((s) => !s.done)?.quest.primaryStat === "int" ? "studying" : "walking",
+      mood: adventureMood(steps.find((s) => !s.done)?.quest, today),
     };
   }
   if (steps.length) {
