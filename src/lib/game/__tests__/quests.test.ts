@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { effectiveStatus, questlineProgress } from "../quests";
+import {
+  RETRY_DAYS,
+  bossReadiness,
+  effectiveStatus,
+  questlineProgress,
+  retryDeadline,
+} from "../quests";
 
 describe("effectiveStatus", () => {
   const today = "2026-10-08";
@@ -43,5 +49,29 @@ describe("questlineProgress", () => {
 
   it("is zero for an empty questline", () => {
     expect(questlineProgress([]).ratio).toBe(0);
+  });
+});
+
+describe("retryDeadline", () => {
+  it("gives an expired quest a fresh week", () => {
+    expect(retryDeadline("2026-10-08")).toBe("2026-10-15");
+    expect(RETRY_DAYS).toBe(7);
+  });
+});
+
+describe("bossReadiness", () => {
+  it("is the XP share of finished prep steps, ignoring the boss and dailies", () => {
+    expect(
+      bossReadiness([
+        { type: "main", status: "completed", xp: 70 },
+        { type: "main", status: "active", xp: 70 },
+        { type: "daily", status: "active", xp: 20 },
+        { type: "boss", status: "active", xp: 500 },
+      ]),
+    ).toBe(0.5);
+  });
+
+  it("is null for a boss without prep", () => {
+    expect(bossReadiness([{ type: "boss", status: "active", xp: 500 }])).toBeNull();
   });
 });

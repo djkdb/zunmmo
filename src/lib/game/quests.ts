@@ -1,5 +1,5 @@
 import type { Difficulty, QuestType, Stat } from "./types";
-import { type GameDate, daysBetween } from "./time";
+import { type GameDate, addDays, daysBetween } from "./time";
 
 /** Form defaults when the player has not chosen (GAME_MASTER §6). */
 export const DEFAULT_DIFFICULTY: Readonly<Record<QuestType, Difficulty>> = {
@@ -60,4 +60,23 @@ export function questlineProgress(
     completedXp,
     totalXp,
   };
+}
+
+/** "다시 도전" on an expired quest gives it a fresh week (GAME_SYSTEM §1.4). */
+export const RETRY_DAYS = 7;
+
+export function retryDeadline(today: GameDate): GameDate {
+  return addDays(today, RETRY_DAYS);
+}
+
+/**
+ * Boss readiness (UI_GUIDE §4.2): how much of the boss's questline prep is done, by XP.
+ * The boss itself and dailies don't count; null when the boss has no prep steps.
+ */
+export function bossReadiness(
+  steps: ReadonlyArray<{ type: QuestType; status: StoredQuestStatus; xp: number }>,
+): number | null {
+  const prep = steps.filter((s) => s.type !== "boss");
+  const progress = questlineProgress(prep);
+  return progress.total === 0 ? null : progress.ratio;
 }

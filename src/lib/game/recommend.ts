@@ -19,6 +19,22 @@ export const RECOMMEND_WEIGHTS = {
 
 export const MAX_PICKS = 6;
 
+/**
+ * Pace of the day (GAME_MASTER §3). Late at night and on the first day back the GM plans a
+ * light day: a short warm-up instead of the full capacity, so the plan matches the briefing.
+ */
+export type AdventurePace = "normal" | "night" | "comeback";
+export const LIGHT_PACE = { budgetMinutes: 60, maxPicks: 2 } as const;
+/** Local hours before this count as late night (00:00–04:59). */
+export const LATE_NIGHT_END_HOUR = 5;
+/** Days since the last completion that make today a comeback. */
+export const COMEBACK_GAP_DAYS = 3;
+/**
+ * Even when schedules or a forced boss use up the day, a few short quests still fit in the
+ * gaps between them (GAME_SYSTEM §8, "틈새 시간").
+ */
+export const GAP_MINUTES = 30;
+
 /** Default length when the player left `estimated_minutes` empty (GAME_SYSTEM §8). */
 export const DEFAULT_MINUTES: Readonly<Record<Difficulty, number>> = {
   1: 15,
@@ -61,9 +77,11 @@ export interface RecommendInput {
   /** profiles.daily_capacity_min */
   capacityMinutes: number;
   today: GameDate;
+  /** Defaults to "normal"; see `adventurePace`. */
+  pace?: AdventurePace;
 }
 
-export type PickReason = "boss" | "deadline" | "daily" | "questline" | "balance" | "open";
+export type PickReason = "boss" | "prep" | "deadline" | "daily" | "questline" | "balance" | "open";
 
 export interface RecommendedQuest {
   questId: string;
@@ -81,6 +99,24 @@ export interface Recommendation {
   totalMinutes: number;
   /** Capacity left after schedules. */
   capacity: number;
+  /** Minutes the plan was filled against (capacity, or the light-pace budget). */
+  budget: number;
+  pace: AdventurePace;
+  /** The best quest left out only because it is longer than today's budget — "쪼개 볼까?". */
+  tooBig: RecommendedQuest | null;
+}
+
+/** Night or comeback days get a light plan; night wins when both apply. */
+export function adventurePace(input: {
+  today: GameDate;
+  localHour: number;
+  lastPlayedDate: GameDate | null;
+}): AdventurePace {
+  if (input.localHour < LATE_NIGHT_END_HOUR) return "night";
+  if (input.lastPlayedDate && daysBetween(input.lastPlayedDate, input.today) >= COMEBACK_GAP_DAYS) {
+    return "comeback";
+  }
+  return "normal";
 }
 
 export function questMinutes(
@@ -104,11 +140,42 @@ export function statNeglect(stat: Stat, xpLast7Days: Readonly<Record<Stat, numbe
   return 1 - Math.max(0, xpLast7Days[stat] ?? 0) / peak;
 }
 
-/** Candidates: open one-off quests + dailies due today and not yet done today. */
+/**
+ * A boss whose questline still has open main steps is an event to prepare for, not work to do
+ * today — until it is due tomorrow. Its pressure moves to the questline's next step ("prep").
+ */
+function bossesAwaitingPrep(
+  quests: readonly RecommendQuest[],
+  today: GameDate,
+): Map<string, RecommendQuest> {
+  const openMainGoals = new Set(
+    quests
+      .filter(
+        (q) => q.type === "main" && q.goalId && (q.status === "active" || q.status === "expired"),
+      )
+      .map((q) => q.goalId!),
+  );
+  const byGoal = new Map<string, RecommendQuest>();
+  for (const q of quests) {
+    if (q.type !== "boss" || q.status !== "active" || !q.goalId || !q.deadline) continue;
+    if (!openMainGoals.has(q.goalId) || daysBetween(today, q.deadline) <= 1) continue;
+    const current = byGoal.get(q.goalId);
+    if (!current || q.deadline < current.deadline!) byGoal.set(q.goalId, q);
+  }
+  return byGoal;
+}
+
+/**
+ * Candidates: open one-off quests + dailies due today and not yet done today. A boss whose
+ * date has passed is over (it can be retried with a new date), and a boss still waiting on
+ * its prep steps is played through those steps.
+ */
 export function eligibleQuests(input: Pick<RecommendInput, "quests" | "completions" | "today">) {
   const { quests, completions, today } = input;
   const weekStart = isoWeekStart(today);
+  const awaitingPrep = new Set([...bossesAwaitingPrep(quests, today).values()].map((q) => q.id));
   return quests.filter((q) => {
+    if (q.type === "boss" && (q.status === "expired" || awaitingPrep.has(q.id))) return false;
     if (q.type === "daily") {
       if (q.status !== "active" || !q.repeat) return false;
       const mine = completions.filter((c) => c.questId === q.id);
@@ -145,12 +212,18 @@ export function scoreQuest(
     isNextStep: boolean;
     questlineProgress: Readonly<Record<string, number>>;
     statXpLast7Days: Readonly<Record<Stat, number>>;
+    /** Deadline of the boss this quest prepares for (next step of the boss's questline). */
+    bossDeadline?: GameDate | null;
   },
 ): { score: number; reason: PickReason } {
   const w = RECOMMEND_WEIGHTS;
   const parts: Record<Exclude<PickReason, "open">, number> = {
     deadline: w.urgency * urgency(quest.deadline, context.today),
     boss: quest.type === "boss" ? w.boss : 0,
+    // The next prep step carries the boss's date pressure and part of its weight.
+    prep: context.bossDeadline
+      ? w.urgency * urgency(context.bossDeadline, context.today) + w.boss / 2
+      : 0,
     daily: quest.type === "daily" ? w.dueToday : 0,
     // Progressing questlines pull harder; even a fresh one gets half weight on its next step.
     questline:
@@ -177,28 +250,46 @@ export function scoreQuest(
   return { score: Math.round(score * 1000) / 1000, reason };
 }
 
+/** Reasons worth a "split it" hint when the quest cannot fit today; a long movie is not one. */
+const IMPORTANT: ReadonlySet<PickReason> = new Set(["questline", "prep", "deadline"]);
+
 export function recommendToday(input: RecommendInput): Recommendation {
+  const pace = input.pace ?? "normal";
   const capacity = Math.max(0, input.capacityMinutes - Math.max(0, input.scheduledMinutes));
+  const light = pace !== "normal";
+  const budget = light ? Math.min(capacity, LIGHT_PACE.budgetMinutes) : capacity;
+  const maxPicks = light ? LIGHT_PACE.maxPicks : MAX_PICKS;
+
   const steps = nextSteps(input.quests);
   const byId = new Map(input.quests.map((q) => [q.id, q]));
+  const prepBoss = bossesAwaitingPrep(input.quests, input.today);
 
   const candidates: RecommendedQuest[] = eligibleQuests(input)
     .map((quest) => {
+      const isNextStep = steps.has(quest.id);
       const { score, reason } = scoreQuest(quest, {
         today: input.today,
         capacity: Math.max(capacity, 1),
-        isNextStep: steps.has(quest.id),
+        isNextStep,
         questlineProgress: input.questlineProgress,
         statXpLast7Days: input.statXpLast7Days,
+        bossDeadline:
+          isNextStep && quest.goalId ? (prepBoss.get(quest.goalId)?.deadline ?? null) : null,
       });
       return { questId: quest.id, score, minutes: questMinutes(quest), xp: quest.xp, reason };
     })
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
-      const da = byId.get(a.questId)!.deadline ?? "9999-12-31";
-      const db = byId.get(b.questId)!.deadline ?? "9999-12-31";
+      const qa = byId.get(a.questId)!;
+      const qb = byId.get(b.questId)!;
+      const da = qa.deadline ?? "9999-12-31";
+      const db = qb.deadline ?? "9999-12-31";
       if (da !== db) return da < db ? -1 : 1;
-      if (b.xp !== a.xp) return b.xp - a.xp;
+      // Equal quests keep the order the player made them in — routines read top to bottom.
+      if (qa.createdAt !== qb.createdAt) return qa.createdAt < qb.createdAt ? -1 : 1;
+      const sa = qa.sortOrder ?? 0;
+      const sb = qb.sortOrder ?? 0;
+      if (sa !== sb) return sa - sb;
       return a.questId < b.questId ? -1 : 1;
     });
 
@@ -211,17 +302,24 @@ export function recommendToday(input: RecommendInput): Recommendation {
   });
 
   const picks = forced.slice(0, MAX_PICKS);
-  let minutes = picks.reduce((sum, p) => sum + p.minutes, 0);
+  const forcedMinutes = picks.reduce((sum, p) => sum + p.minutes, 0);
+  // Whatever the forced bosses and schedules leave, short quests still fit in the gaps.
+  const fillBudget = Math.max(budget - forcedMinutes, GAP_MINUTES);
+  let filled = 0;
+  let tooBig: RecommendedQuest | null = null;
   for (const c of candidates) {
-    if (picks.length >= MAX_PICKS) break;
+    if (picks.length >= Math.max(maxPicks, forced.length)) break;
     if (picks.includes(c)) continue;
-    if (minutes + c.minutes > capacity) continue;
+    if (filled + c.minutes > fillBudget) {
+      if (!tooBig && c.minutes > fillBudget && IMPORTANT.has(c.reason)) tooBig = c;
+      continue;
+    }
     picks.push(c);
-    minutes += c.minutes;
+    filled += c.minutes;
   }
   if (picks.length === 0 && candidates.length > 0) {
     picks.push(candidates[0]!);
-    minutes = candidates[0]!.minutes;
+    tooBig = null;
   }
 
   // Present in score order, forced bosses included.
@@ -231,7 +329,10 @@ export function recommendToday(input: RecommendInput): Recommendation {
     picks,
     candidates,
     totalXp: picks.reduce((sum, p) => sum + p.xp, 0),
-    totalMinutes: minutes,
+    totalMinutes: picks.reduce((sum, p) => sum + p.minutes, 0),
     capacity,
+    budget,
+    pace,
+    tooBig: tooBig && !picks.includes(tooBig) ? tooBig : null,
   };
 }

@@ -1,3 +1,4 @@
+import { COMEBACK_GAP_DAYS, LATE_NIGHT_END_HOUR } from "./recommend";
 import { type GameDate, daysBetween } from "./time";
 
 /** Character states the GM can ask for (CHARACTER_GUIDE §5; the UI resolves undrawn ones). */
@@ -45,8 +46,8 @@ export function josa(word: string, withFinal: string, withoutFinal: string): str
 
 const POOLS: Record<BriefingSituation, ReadonlyArray<(f: Fill) => string>> = {
   late_night: [
-    () => "푹 쉬는 것도 모험의 일부야. 내일 다시 만나자.",
-    () => "밤이 깊었어. 오늘은 여기까지 해도 충분해.",
+    () => "늦은 밤이야. 꼭 필요한 것만 짧게 하고 푹 쉬자. 쉬는 것도 모험의 일부야.",
+    () => "밤이 깊었어. 가볍게 하나만 끝내고, 나머지는 내일의 나에게 맡기자.",
   ],
   boss_today: [
     (f) => `오늘은 ${josa(f.boss!, "과", "와")} 맞붙는 날이야. 준비한 만큼 보여 주자!`,
@@ -62,7 +63,7 @@ const POOLS: Record<BriefingSituation, ReadonlyArray<(f: Fill) => string>> = {
   ],
   comeback: [
     () => "다시 왔구나. 가볍게 하나부터 시작하자.",
-    () => "어서 와! 오늘은 작은 퀘스트 하나면 충분해.",
+    () => "어서 와! 오늘은 작은 퀘스트 두어 개면 충분해.",
   ],
   light_day: [
     () => "오늘은 짧은 모험이야. 여유롭게 다녀오자.",
@@ -85,10 +86,7 @@ const MOOD: Record<BriefingSituation, CharacterMood> = {
   default: "idle",
 };
 
-/** Night is 00:00–04:59 local (GAME_MASTER §4). */
-const LATE_NIGHT_END_HOUR = 5;
 const STREAK_MIN_DAYS = 3;
-const COMEBACK_GAP_DAYS = 3;
 const LIGHT_DAY_MINUTES = 60;
 const BOSS_SOON_DAYS = 3;
 

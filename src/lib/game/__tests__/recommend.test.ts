@@ -4,7 +4,10 @@ import {
   type RecommendInput,
   type RecommendQuest,
   DEFAULT_MINUTES,
+  GAP_MINUTES,
+  LIGHT_PACE,
   MAX_PICKS,
+  adventurePace,
   eligibleQuests,
   questMinutes,
   recommendToday,
@@ -200,5 +203,110 @@ describe("recommendToday", () => {
       input([study, friends], { statXpLast7Days: { ...NO_STATS, int: 300 } }),
     );
     expect(picks[0]).toMatchObject({ questId: friends.id, reason: "balance" });
+  });
+});
+
+describe("adventurePace", () => {
+  it("is night before 05:00, comeback after a 3-day gap, normal otherwise", () => {
+    expect(adventurePace({ today: TODAY, localHour: 1, lastPlayedDate: "2026-10-07" })).toBe(
+      "night",
+    );
+    expect(adventurePace({ today: TODAY, localHour: 1, lastPlayedDate: "2026-09-01" })).toBe(
+      "night",
+    );
+    expect(adventurePace({ today: TODAY, localHour: 9, lastPlayedDate: "2026-10-05" })).toBe(
+      "comeback",
+    );
+    expect(adventurePace({ today: TODAY, localHour: 9, lastPlayedDate: "2026-10-06" })).toBe(
+      "normal",
+    );
+    expect(adventurePace({ today: TODAY, localHour: 9, lastPlayedDate: null })).toBe("normal");
+  });
+});
+
+describe("persona-driven rules", () => {
+  it("plans a light day at night or on a comeback (P1, P3)", () => {
+    const quests = Array.from({ length: 5 }, () => quest({ estimatedMinutes: 20 }));
+    for (const pace of ["night", "comeback"] as const) {
+      const result = recommendToday(input(quests, { pace }));
+      expect(result.picks).toHaveLength(LIGHT_PACE.maxPicks);
+      expect(result.budget).toBe(LIGHT_PACE.budgetMinutes);
+      expect(result.pace).toBe(pace);
+    }
+    expect(recommendToday(input(quests)).picks).toHaveLength(5);
+  });
+
+  it("prepares for a boss through its questline instead of fighting it early (P1)", () => {
+    const study = quest({
+      type: "main",
+      goalId: "exam",
+      primaryStat: "int",
+      createdAt: "2026-09-01T00:00:00Z",
+    });
+    const later = quest({
+      type: "main",
+      goalId: "exam",
+      primaryStat: "int",
+      createdAt: "2026-09-02T00:00:00Z",
+    });
+    const exam = quest({ type: "boss", goalId: "exam", difficulty: 5, deadline: "2026-10-11" });
+    const side = quest({ deadline: "2026-10-12" });
+    const { candidates } = recommendToday(input([side, later, exam, study]));
+    expect(candidates.map((c) => c.questId)).not.toContain(exam.id);
+    expect(candidates[0]).toMatchObject({ questId: study.id, reason: "prep" });
+
+    // The day before, the boss itself is on the list.
+    const eve = recommendToday(input([study, exam], { today: "2026-10-10" }));
+    expect(eve.picks.map((p) => p.questId)).toContain(exam.id);
+  });
+
+  it("drops bosses whose date has passed (P3)", () => {
+    const missed = quest({ type: "boss", status: "expired", deadline: "2026-10-03" });
+    const yoga = quest({ type: "daily", repeat: { freq: "daily" } });
+    const { candidates } = recommendToday(input([missed, yoga]));
+    expect(candidates.map((c) => c.questId)).toEqual([yoga.id]);
+  });
+
+  it("still fits short quests between back-to-back schedules (P4)", () => {
+    const boss = quest({ type: "boss", estimatedMinutes: 180, deadline: "2026-10-09" });
+    const invoice = quest({ estimatedMinutes: 15 });
+    const sketch = quest({ type: "daily", repeat: { freq: "daily" }, estimatedMinutes: 15 });
+    const essay = quest({ estimatedMinutes: 90 });
+    const result = recommendToday(input([boss, invoice, sketch, essay], { scheduledMinutes: 270 }));
+    expect(result.capacity).toBe(0);
+    expect(result.picks.map((p) => p.questId).sort()).toEqual(
+      [boss.id, invoice.id, sketch.id].sort(),
+    );
+    expect(result.totalMinutes).toBe(180 + 2 * 15);
+    expect(GAP_MINUTES).toBeGreaterThanOrEqual(30);
+  });
+
+  it("keeps equal routines in the order they were made (P5)", () => {
+    const morning = quest({
+      type: "daily",
+      repeat: { freq: "daily" },
+      id: "zzz",
+      createdAt: "2026-09-01T00:00:00Z",
+    });
+    const evening = quest({
+      type: "daily",
+      repeat: { freq: "daily" },
+      id: "aaa",
+      createdAt: "2026-09-02T00:00:00Z",
+    });
+    const { picks } = recommendToday(input([evening, morning]));
+    expect(picks.map((p) => p.questId)).toEqual(["zzz", "aaa"]);
+  });
+
+  it("names a questline step that is too long for today (P2)", () => {
+    const payments = quest({ type: "main", goalId: "launch", estimatedMinutes: 120 });
+    const reading = quest({ type: "daily", repeat: { freq: "daily" }, estimatedMinutes: 20 });
+    const movie = quest({ estimatedMinutes: 160 });
+    const result = recommendToday(input([payments, reading, movie], { capacityMinutes: 90 }));
+    expect(result.picks.map((p) => p.questId)).toEqual([reading.id]);
+    expect(result.tooBig?.questId).toBe(payments.id);
+
+    const onlyMovie = recommendToday(input([reading, movie], { capacityMinutes: 90 }));
+    expect(onlyMovie.tooBig).toBeNull();
   });
 });
