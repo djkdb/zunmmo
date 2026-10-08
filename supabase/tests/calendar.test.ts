@@ -112,6 +112,85 @@ describe.skipIf(!available)("schedules & adventures", () => {
     );
   });
 
+  it("changes one occurrence of a series and puts it back", async () => {
+    // Mon/Wed 10:30 KST from 2026-10-05; profiles default to Asia/Seoul.
+    const series = await asUser(
+      alice,
+      async (c) =>
+        (
+          await c.query(
+            `insert into schedules (title, starts_at, ends_at, repeat_weekdays)
+             values ('운영체제 수업', '2026-10-05T01:30:00Z', '2026-10-05T03:00:00Z', '{1,3}')
+             returning id`,
+          )
+        ).rows[0].id as string,
+    );
+    const edit = (user: string, date: string, startsAt = "2026-10-07T05:00:00Z") =>
+      asUser(
+        user,
+        async (c) =>
+          (
+            await c.query(
+              "select edit_occurrence($1, $2, '운영체제 보강', $3, false, p_location => '302호') as id",
+              [series, date, startsAt],
+            )
+          ).rows[0].id as string,
+      );
+
+    // Bob cannot touch Alice's series; Tuesday is not an occurrence; before the start is not.
+    await expect(edit(bob, "2026-10-07")).rejects.toThrow(/NOT_FOUND/);
+    await expect(edit(alice, "2026-10-06")).rejects.toThrow(/VALIDATION_FAILED/);
+    await expect(edit(alice, "2026-09-30")).rejects.toThrow(/VALIDATION_FAILED/);
+
+    const moved = await edit(alice, "2026-10-07");
+    const rows = async () =>
+      asUser(
+        alice,
+        async (c) =>
+          (
+            await c.query(
+              "select id, title, series_id, occurrence_date::text, skip_dates::text[] from schedules where id = any($1)",
+              [[series, moved]],
+            )
+          ).rows,
+      );
+    const after = await rows();
+    expect(after.find((r) => r.id === moved)).toMatchObject({
+      title: "운영체제 보강",
+      series_id: series,
+      occurrence_date: "2026-10-07",
+    });
+    expect(after.find((r) => r.id === series)?.skip_dates).toEqual(["2026-10-07"]);
+    // Changed once already: change the copy instead.
+    await expect(edit(alice, "2026-10-07")).rejects.toThrow(/VALIDATION_FAILED/);
+    // A changed occurrence cannot repeat, and the link columns are not client-writable.
+    await expect(
+      asUser(alice, (c) =>
+        c.query("update schedules set repeat_weekdays = '{1}' where id = $1", [moved]),
+      ),
+    ).rejects.toThrow(/schedules_occurrence_shape/);
+    await expect(
+      asUser(alice, (c) => c.query("update schedules set series_id = null where id = $1", [moved])),
+    ).rejects.toThrow(/permission denied/);
+
+    await expect(
+      asUser(bob, (c) => c.query("select restore_occurrence($1)", [moved])),
+    ).rejects.toThrow(/NOT_FOUND/);
+    await asUser(alice, (c) => c.query("select restore_occurrence($1)", [moved]));
+    const restored = await rows();
+    expect(restored).toHaveLength(1);
+    expect(restored[0].skip_dates).toEqual([]);
+
+    // Deleting the series removes its changed occurrences.
+    const again = await edit(alice, "2026-10-12", "2026-10-12T05:00:00Z");
+    await asUser(alice, (c) => c.query("delete from schedules where id = $1", [series]));
+    const left = await asUser(
+      alice,
+      async (c) => (await c.query("select id from schedules where id = $1", [again])).rows,
+    );
+    expect(left).toHaveLength(0);
+  });
+
   it("holds at most twelve quests in a day's adventure", async () => {
     const twelve = Array.from({ length: 12 }, () => aliceQuest);
     await asUser(alice, (c) =>

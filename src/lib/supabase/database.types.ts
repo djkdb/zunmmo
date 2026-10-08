@@ -281,9 +281,11 @@ export type Database = {
           ends_at: string | null;
           id: string;
           location: string | null;
+          occurrence_date: string | null;
           quest_id: string | null;
           repeat_until: string | null;
           repeat_weekdays: number[] | null;
+          series_id: string | null;
           skip_dates: string[];
           source: string;
           starts_at: string;
@@ -297,9 +299,11 @@ export type Database = {
           ends_at?: string | null;
           id?: string;
           location?: string | null;
+          occurrence_date?: string | null;
           quest_id?: string | null;
           repeat_until?: string | null;
           repeat_weekdays?: number[] | null;
+          series_id?: string | null;
           skip_dates?: string[];
           source?: string;
           starts_at: string;
@@ -312,9 +316,11 @@ export type Database = {
           ends_at?: string | null;
           id?: string;
           location?: string | null;
+          occurrence_date?: string | null;
           quest_id?: string | null;
           repeat_until?: string | null;
           repeat_weekdays?: number[] | null;
+          series_id?: string | null;
           skip_dates?: string[];
           source?: string;
           starts_at?: string;
@@ -327,6 +333,13 @@ export type Database = {
             columns: ["quest_id"];
             isOneToOne: false;
             referencedRelation: "quests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "schedules_series_id_fkey";
+            columns: ["series_id"];
+            isOneToOne: false;
+            referencedRelation: "schedules";
             referencedColumns: ["id"];
           },
         ];
@@ -466,6 +479,19 @@ export type Database = {
         };
       };
       delete_my_account: { Args: Record<PropertyKey, never>; Returns: undefined };
+      edit_occurrence: {
+        Args: {
+          p_all_day: boolean;
+          p_date: string;
+          p_ends_at?: string;
+          p_location?: string;
+          p_quest_id?: string;
+          p_series_id: string;
+          p_starts_at: string;
+          p_title: string;
+        };
+        Returns: string;
+      };
       game_date_at: {
         Args: { p_at: string; p_day_start_hour: number; p_timezone: string };
         Returns: string;
@@ -473,6 +499,7 @@ export type Database = {
       owns_all_quests: { Args: { p_ids: string[] }; Returns: boolean };
       player_game_date: { Args: { p_user: string }; Returns: string };
       player_progress: { Args: Record<PropertyKey, never>; Returns: Json };
+      restore_occurrence: { Args: { p_id: string }; Returns: string };
       set_goal_archived: {
         Args: { p_archived: boolean; p_goal_id: string };
         Returns: {
