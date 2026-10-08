@@ -282,6 +282,9 @@ export type Database = {
           id: string;
           location: string | null;
           quest_id: string | null;
+          repeat_until: string | null;
+          repeat_weekdays: number[] | null;
+          skip_dates: string[];
           source: string;
           starts_at: string;
           title: string;
@@ -295,6 +298,9 @@ export type Database = {
           id?: string;
           location?: string | null;
           quest_id?: string | null;
+          repeat_until?: string | null;
+          repeat_weekdays?: number[] | null;
+          skip_dates?: string[];
           source?: string;
           starts_at: string;
           title: string;
@@ -307,6 +313,9 @@ export type Database = {
           id?: string;
           location?: string | null;
           quest_id?: string | null;
+          repeat_until?: string | null;
+          repeat_weekdays?: number[] | null;
+          skip_dates?: string[];
           source?: string;
           starts_at?: string;
           title?: string;

@@ -76,6 +76,42 @@ describe.skipIf(!available)("schedules & adventures", () => {
     expect(rows[0].quest_ids).toEqual([aliceQuest]);
   });
 
+  it("stores weekly series with skips and rejects invalid recurrence", async () => {
+    const row = await asUser(
+      alice,
+      async (c) =>
+        (
+          await c.query(
+            `insert into schedules (title, starts_at, ends_at, repeat_weekdays, repeat_until, skip_dates)
+             values ('자료구조 수업', '2026-10-05T01:30:00Z', '2026-10-05T03:00:00Z', '{1,3}', '2026-12-18', '{2026-10-12}')
+             returning *`,
+          )
+        ).rows[0],
+    );
+    expect(row.repeat_weekdays).toEqual([1, 3]);
+    await expect(
+      asUser(alice, (c) =>
+        c.query(
+          "insert into schedules (title, starts_at, repeat_weekdays) values ('x', now(), '{8}')",
+        ),
+      ),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      asUser(alice, (c) =>
+        c.query(
+          "insert into schedules (title, starts_at, repeat_until) values ('x', now(), '2026-12-01')",
+        ),
+      ),
+    ).rejects.toThrow(/schedules_until_needs_repeat/);
+    // Skipping one occurrence is an update the owner may make.
+    await asUser(alice, (c) =>
+      c.query(
+        "update schedules set skip_dates = skip_dates || '{2026-10-14}'::date[] where id = $1",
+        [row.id],
+      ),
+    );
+  });
+
   it("blocks anonymous access", async () => {
     await expect(asUser(null, (c) => c.query("select * from adventures"))).rejects.toThrow(
       /permission denied/,
