@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AchievementBadge } from "@/components/game/AchievementBadge";
+import { BossBanner } from "@/components/game/BossBanner";
 import { QuestTypeTag } from "@/components/game/QuestTypeTag";
 import { StatBar } from "@/components/game/StatBar";
 import { ICON_ATLAS } from "@/components/pixel/icons.generated";
@@ -200,6 +201,25 @@ export default function StyleguidePage() {
               {STATS.map((stat) => (
                 <StatBar key={stat} stat={stat} xp={DEMO_STAT_XP[stat]} />
               ))}
+            </div>
+          </Specimen>
+          <Specimen label="BossBanner — 현상수배서, 퀘스트라인 보스는 준비도(보스 HP) 바">
+            <div className="flex w-full max-w-xl flex-col gap-6">
+              <BossBanner
+                title="자료구조 중간고사"
+                deadline={addDays(DEMO_TODAY, 3)}
+                today={DEMO_TODAY}
+                xp={500}
+                href="#game"
+                readiness={0.4}
+              />
+              <BossBanner
+                title="컴퓨터네트워크 과제 제출"
+                deadline={addDays(DEMO_TODAY, 1)}
+                today={DEMO_TODAY}
+                xp={300}
+                href="#game"
+              />
             </div>
           </Specimen>
           <Specimen label="AchievementBadge — 희귀도는 베벨 색, 잠김은 실루엣 + 텍스트">

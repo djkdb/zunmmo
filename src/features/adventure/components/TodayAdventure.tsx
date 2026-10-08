@@ -13,10 +13,18 @@ import { formatMinutes, formatXpGain } from "@/lib/utils/format";
 
 import { startAdventure } from "../actions";
 import { AdventureSubmit } from "./AdventureSubmit";
+import { PlanEditButton } from "./PlanEditButton";
 
 export interface AdventureStep {
   quest: QuestView;
   done: boolean;
+}
+
+/** Extra GM lines that explain the plan (schedules taken out, a quest too long for today). */
+export interface PlanNotes {
+  schedules?: { count: number; minutes: number };
+  tooBig?: { id: string; title: string; minutes: number };
+  light?: boolean;
 }
 
 type TodayAdventureProps =
@@ -26,8 +34,17 @@ type TodayAdventureProps =
       titles: string[];
       totalXp: number;
       totalMinutes: number;
+      notes: PlanNotes;
     }
-  | { state: "active"; steps: AdventureStep[]; briefing: string | null; today: GameDate }
+  | {
+      state: "active";
+      steps: AdventureStep[];
+      briefing: string | null;
+      today: GameDate;
+      /** Quests the player can add (GM candidates not in the plan). */
+      extras: Array<{ quest: QuestView; minutes: number }>;
+      full: boolean;
+    }
   | {
       state: "done";
       steps: AdventureStep[];
@@ -53,7 +70,8 @@ export function TodayAdventure(props: TodayAdventureProps) {
     >
       <h2
         id="today-title"
-        className="flex items-center gap-2 font-pixel text-pixel text-on-parchment"
+        tabIndex={-1}
+        className="flex items-center gap-2 font-pixel text-pixel text-on-parchment focus:outline-none"
       >
         <PixelIcon name="ui-sword" />
         {LABEL}
@@ -82,16 +100,48 @@ function GmLine({ children }: { children: string }) {
   );
 }
 
+function Notes({ notes }: { notes: PlanNotes }) {
+  const lines = [];
+  if (notes.schedules && notes.schedules.count > 0) {
+    lines.push(
+      <li key="schedules">
+        오늘 일정 {notes.schedules.count}개({formatMinutes(notes.schedules.minutes)})를 빼고 남은
+        시간에 맞췄어요.
+      </li>,
+    );
+  }
+  if (notes.light) {
+    lines.push(
+      <li key="light">오늘은 가볍게 1시간 안쪽으로만 골랐어요. 시작한 뒤 더 담을 수 있어요.</li>,
+    );
+  }
+  if (notes.tooBig) {
+    lines.push(
+      <li key="too-big">
+        <Link href={`/quests/${notes.tooBig.id}`} className="underline underline-offset-2">
+          {notes.tooBig.title}
+        </Link>
+        ({formatMinutes(notes.tooBig.minutes)})는 오늘 시간에 안 들어가요. 작게 나누면 추천에 넣을
+        수 있어요.
+      </li>,
+    );
+  }
+  if (!lines.length) return null;
+  return <ul className="flex flex-col gap-1 text-small text-on-parchment-muted">{lines}</ul>;
+}
+
 function Ready({
   briefing,
   titles,
   totalXp,
   totalMinutes,
+  notes,
 }: {
   briefing: string;
   titles: string[];
   totalXp: number;
   totalMinutes: number;
+  notes: PlanNotes;
 }) {
   return (
     <>
@@ -110,6 +160,7 @@ function Ready({
         ))}
         {titles.length > 3 && <li>외 {titles.length - 3}개</li>}
       </ul>
+      <Notes notes={notes} />
       <form action={startAdventure}>
         <AdventureSubmit variant="accent" size="lg" block icon={<PixelIcon name="ui-sword" />}>
           START TODAY&apos;S ADVENTURE
@@ -133,21 +184,26 @@ function Active({
   steps,
   briefing,
   today,
+  extras,
+  full,
 }: {
   steps: AdventureStep[];
   briefing: string | null;
   today: GameDate;
+  extras: Array<{ quest: QuestView; minutes: number }>;
+  full: boolean;
 }) {
   const done = steps.filter((s) => s.done).length;
   const remainingXp = steps.filter((s) => !s.done).reduce((sum, s) => sum + s.quest.xp, 0);
+  const removable = steps.filter((s) => !s.done).length > 1;
   return (
     <>
       {briefing && <GmLine>{briefing}</GmLine>}
-      <ol className="flex flex-col">
+      <ol aria-label="오늘의 모험 퀘스트" className="flex flex-col">
         {steps.map(({ quest, done: isDone }, i) => (
           <li
             key={quest.id}
-            className="relative flex min-h-14 items-center gap-3 border-b border-parchment-divider py-1.5 last:border-b-0"
+            className="relative flex min-h-14 items-center gap-2 border-b border-parchment-divider py-1.5 last:border-b-0"
           >
             <span
               aria-hidden
@@ -170,12 +226,45 @@ function Active({
                 {isDone && " · 완료"}
               </span>
             </div>
-            <div className="relative z-10">
+            <div className="relative z-10 flex items-center gap-1">
               <QuestAction quest={quest} doneToday={isDone} />
+              {!isDone && removable && (
+                <PlanEditButton kind="remove" questId={quest.id} questTitle={quest.title} />
+              )}
             </div>
           </li>
         ))}
       </ol>
+      {extras.length > 0 && (
+        <details className="group">
+          <summary className="flex min-h-11 cursor-pointer items-center text-small font-semibold text-on-parchment">
+            퀘스트 더 담기 ({extras.length})
+          </summary>
+          {full ? (
+            <p className="text-small text-on-parchment-muted">
+              6개까지 담을 수 있어요. 하나를 빼면 더 담을 수 있어요.
+            </p>
+          ) : (
+            <ul className="mt-2 flex flex-col">
+              {extras.map(({ quest, minutes }) => (
+                <li
+                  key={quest.id}
+                  className="flex min-h-12 items-center gap-3 border-b border-parchment-divider py-1 last:border-b-0"
+                >
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-small font-semibold">{quest.title}</span>
+                    <span className="text-caption text-on-parchment-muted">
+                      {QUEST_TYPE_META[quest.type].ko} · {formatMinutes(minutes)} ·{" "}
+                      {formatXpGain(quest.xp)}
+                    </span>
+                  </span>
+                  <PlanEditButton kind="add" questId={quest.id} questTitle={quest.title} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </details>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="font-pixel text-pixel text-on-parchment" aria-live="polite">
           {done}/{steps.length} 완료 · 남은 보상 {formatXpGain(remainingXp)}

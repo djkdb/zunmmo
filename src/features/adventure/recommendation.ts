@@ -16,6 +16,7 @@ import {
   type Recommendation,
   type RecommendQuest,
   addDays,
+  adventurePace,
   briefing,
   currentStreak,
   daysBetween,
@@ -48,8 +49,19 @@ export function completionWindowStart(today: GameDate): GameDate {
   return weekStart < lastWeek ? weekStart : lastWeek;
 }
 
-/** Gather everything recommendToday needs; pass already-loaded data to skip refetching. */
-export async function recommendationFor(
+export interface TodayPlan {
+  recommendation: Recommendation;
+  briefing: Briefing;
+  /** Fixed schedules today, so the panel can say what the plan already accounts for. */
+  schedules: { count: number; minutes: number };
+}
+
+/**
+ * Everything the Game Master decides for today, from one set of inputs: the pace (night,
+ * comeback), the recommendation and the briefing line — so the words and the plan agree.
+ * Pass already-loaded board data to skip refetching.
+ */
+export async function planToday(
   player: PlayerWithCharacter,
   today: GameDate,
   loaded: Partial<{
@@ -57,37 +69,34 @@ export async function recommendationFor(
     questlines: QuestlineView[];
     completions: CompletionLog[];
   }> = {},
-): Promise<Recommendation> {
-  const [quests, questlines, completions, statXp, schedules] = await Promise.all([
+): Promise<TodayPlan> {
+  const [quests, questlines, completions, statXp, schedules, playDates] = await Promise.all([
     loaded.quests ?? listQuests(today),
     loaded.questlines ?? listQuestlines(today),
     loaded.completions ?? listCompletionsSince(completionWindowStart(today)),
     statXpSince(addDays(today, -6)),
     listSchedules(player, today, today),
+    listPlayDates(),
   ]);
-  return recommendToday({
+  const localHour = Number(toLocal(new Date(), player.profile.timezone).time.slice(0, 2));
+  const lastPlayedDate = playDates.at(-1) ?? null;
+  const scheduledMinutes = schedules.reduce((sum, s) => sum + s.minutes, 0);
+
+  const recommendation = recommendToday({
     quests: quests.map(toRecommendQuest),
     completions,
     questlineProgress: Object.fromEntries(
       questlines.filter((l) => l.status === "active").map((l) => [l.id, l.progress.ratio]),
     ),
     statXpLast7Days: statXp,
-    scheduledMinutes: schedules.reduce((sum, s) => sum + s.minutes, 0),
+    scheduledMinutes,
     capacityMinutes: player.profile.dailyCapacityMin,
     today,
+    pace: adventurePace({ today, localHour, lastPlayedDate }),
   });
-}
 
-/** The GM's line for today (GAME_MASTER §4), from the same data the board already loaded. */
-export async function briefingFor(
-  player: PlayerWithCharacter,
-  today: GameDate,
-  loaded: { quests: QuestView[]; completions: CompletionLog[] },
-  recommendation: Recommendation,
-): Promise<Briefing> {
-  const playDates = await listPlayDates();
   const boss =
-    loaded.quests
+    quests
       .filter(
         (q) =>
           q.type === "boss" &&
@@ -96,14 +105,19 @@ export async function briefingFor(
           daysBetween(today, q.deadline) >= 0,
       )
       .sort((a, b) => (a.deadline! < b.deadline! ? -1 : 1))[0] ?? null;
-  return briefing({
-    today,
-    localHour: Number(toLocal(new Date(), player.profile.timezone).time.slice(0, 2)),
-    completedToday: loaded.completions.filter((c) => c.occurrenceDate === today).length,
-    boss: boss ? { title: boss.title, deadline: boss.deadline! } : null,
-    adventureStreak: currentStreak(playDates, today),
-    lastPlayedDate: playDates.at(-1) ?? null,
-    totalMinutes: recommendation.totalMinutes,
-    pickCount: recommendation.picks.length,
-  });
+
+  return {
+    recommendation,
+    briefing: briefing({
+      today,
+      localHour,
+      completedToday: completions.filter((c) => c.occurrenceDate === today).length,
+      boss: boss ? { title: boss.title, deadline: boss.deadline! } : null,
+      adventureStreak: currentStreak(playDates, today),
+      lastPlayedDate,
+      totalMinutes: recommendation.totalMinutes,
+      pickCount: recommendation.picks.length,
+    }),
+    schedules: { count: schedules.filter((s) => !s.allDay).length, minutes: scheduledMinutes },
+  };
 }

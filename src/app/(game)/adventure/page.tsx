@@ -9,26 +9,25 @@ import { EmptyState } from "@/components/game/EmptyState";
 import { QuestCard } from "@/components/game/QuestCard";
 import { QuestRow } from "@/components/game/QuestRow";
 import { QuestlineMap } from "@/components/game/QuestlineMap";
+import { QUEST_TYPE_META } from "@/components/game/quest-meta";
 import { SettingsLink } from "@/components/layout/SettingsLink";
 import { PixelFrame } from "@/components/pixel/PixelFrame";
 import { selectBoard } from "@/features/adventure/board";
 import { AdventureSkeleton } from "@/features/adventure/components/AdventureSkeleton";
 import { type AdventureStep, TodayAdventure } from "@/features/adventure/components/TodayAdventure";
 import { getAdventure } from "@/features/adventure/queries";
-import {
-  briefingFor,
-  completionWindowStart,
-  recommendationFor,
-} from "@/features/adventure/recommendation";
+import { completionWindowStart, planToday } from "@/features/adventure/recommendation";
 import { SectionHeader } from "@/features/adventure/components/SectionHeader";
 import { type PlayerWithCharacter, playerToday, requireCharacter } from "@/features/player/queries";
-import type { GameDate } from "@/lib/game";
+import { type GameDate, MAX_PICKS, bossReadiness } from "@/lib/game";
+import { formatGameDate } from "@/lib/utils/format";
 import { RecentXpList } from "@/features/progress/components/RecentXpList";
 import {
   type CompletionLog,
   listCompletionsSince,
   listRecentXp,
 } from "@/features/progress/queries";
+import { ExpiredQuestActions } from "@/features/quests/components/ExpiredQuestActions";
 import { QuestAction } from "@/features/quests/components/QuestAction";
 import {
   type QuestView,
@@ -93,6 +92,9 @@ async function Adventure() {
               today={today}
               xp={board.boss.xp}
               href={questHref(board.boss.id)}
+              readiness={bossReadiness(
+                questlines.find((l) => l.id === board.boss!.goal?.id)?.steps ?? [],
+              )}
             />
           )}
 
@@ -186,6 +188,40 @@ async function Adventure() {
             </section>
           )}
 
+          {board.expired.length > 0 && (
+            <section aria-labelledby="expired-title" className="flex flex-col gap-3">
+              <SectionHeader
+                id="expired-title"
+                label="EXPIRED"
+                tone="muted"
+                meta={`${board.expiredCount}`}
+                href={board.expiredCount > board.expired.length ? "/quests" : undefined}
+              />
+              <p className="text-small text-text-muted">
+                기한이 지나도 얻은 XP는 그대로야. 다시 도전하거나 보관해 두자.
+              </p>
+              <ul className="flex flex-col">
+                {board.expired.map((q) => (
+                  <li
+                    key={q.id}
+                    className="flex flex-col gap-2 border-b border-border py-3 last:border-b-0 sm:flex-row sm:items-center"
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <Link href={questHref(q.id)} className="truncate text-title hover:underline">
+                        {q.title}
+                      </Link>
+                      <span className="text-caption text-text-muted">
+                        {QUEST_TYPE_META[q.type].ko} · 기한 만료{" "}
+                        {q.deadline && formatGameDate(q.deadline)}
+                      </span>
+                    </div>
+                    <ExpiredQuestActions questId={q.id} questTitle={q.title} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {recent.length > 0 && (
             <section aria-labelledby="recent-title" className="flex flex-col gap-2">
               <SectionHeader
@@ -204,6 +240,9 @@ async function Adventure() {
   );
 }
 
+/** Extras offered for adding to a started adventure — the GM's next best candidates. */
+const MAX_EXTRAS = 5;
+
 /**
  * Pick the Today's Adventure state (fixed picks once started, otherwise a fresh
  * recommendation with the GM's line) and how the character should look about it.
@@ -213,7 +252,11 @@ async function todayPanel(
   today: GameDate,
   loaded: { quests: QuestView[]; questlines: QuestlineView[]; completions: CompletionLog[] },
 ): Promise<{ panel: Parameters<typeof TodayAdventure>[0]; mood: CharacterState }> {
-  const adventure = await getAdventure(today);
+  const [adventure, plan] = await Promise.all([
+    getAdventure(today),
+    planToday(player, today, loaded),
+  ]);
+  const { recommendation, briefing } = plan;
   const doneToday = new Set(
     loaded.completions.filter((c) => c.occurrenceDate === today).map((c) => c.questId),
   );
@@ -225,13 +268,23 @@ async function todayPanel(
   });
 
   if (steps.length && steps.some((s) => !s.done)) {
+    const inPlan = new Set(steps.map((s) => s.quest.id));
     return {
-      panel: { state: "active", steps, briefing: adventure?.briefing ?? null, today },
+      panel: {
+        state: "active",
+        steps,
+        briefing: adventure?.briefing ?? null,
+        today,
+        extras: recommendation.candidates
+          .filter((c) => !inPlan.has(c.questId) && byId.has(c.questId))
+          .slice(0, MAX_EXTRAS)
+          .map((c) => ({ quest: byId.get(c.questId)!, minutes: c.minutes })),
+        full: steps.length >= MAX_PICKS,
+      },
       // On the way to the next step; a book in hand when that step grows INT (CHARACTER_GUIDE §5).
       mood: steps.find((s) => !s.done)?.quest.primaryStat === "int" ? "studying" : "walking",
     };
   }
-  const recommendation = await recommendationFor(player, today, loaded);
   if (steps.length) {
     return {
       panel: {
@@ -243,17 +296,24 @@ async function todayPanel(
       mood: "celebrating",
     };
   }
-  const gm = await briefingFor(player, today, loaded, recommendation);
-  if (!recommendation.picks.length) return { panel: { state: "rest" }, mood: gm.mood };
+  if (!recommendation.picks.length) return { panel: { state: "rest" }, mood: briefing.mood };
+  const tooBig = recommendation.tooBig ? byId.get(recommendation.tooBig.questId) : undefined;
   return {
     panel: {
       state: "ready",
-      briefing: gm.line,
+      briefing: briefing.line,
       titles: recommendation.picks.map((p) => byId.get(p.questId)?.title ?? ""),
       totalXp: recommendation.totalXp,
       totalMinutes: recommendation.totalMinutes,
+      notes: {
+        schedules: plan.schedules,
+        light: recommendation.pace !== "normal",
+        tooBig: tooBig
+          ? { id: tooBig.id, title: tooBig.title, minutes: recommendation.tooBig!.minutes }
+          : undefined,
+      },
     },
-    mood: gm.mood,
+    mood: briefing.mood,
   };
 }
 
