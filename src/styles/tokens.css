@@ -2,13 +2,16 @@
  * LIFE RPG design tokens — single source of truth.
  * Mirrors design/COLOR_PALETTE.md 1:1. Change both in the same PR.
  *
+ * `@theme static` keeps every variable in the output even when no utility class uses it —
+ * pixel.css and inline styles read ramps through var().
+ *
  * Layers:
  *   1) Ramps    — only for components/pixel internals (bg-ink-900, text-gold-300 …)
  *   2) Semantic — what every other component uses (bg-surface, text-muted, bg-accent …)
  *   3) Type, radius, pixel unit
  */
 
-@theme {
+@theme static {
   /* Disable Tailwind defaults so arbitrary palettes/shadows/radii can't sneak in. */
   --color-*: initial;
   --shadow-*: initial;
@@ -174,7 +177,8 @@
 
   /* ───────────── 3) Type / radius ───────────── */
 
-  --font-sans: var(--font-pretendard), Pretendard, system-ui, -apple-system, "Apple SD Gothic Neo",
+  --font-sans:
+    var(--font-pretendard), Pretendard, system-ui, -apple-system, "Apple SD Gothic Neo",
     "Noto Sans KR", sans-serif;
   /* Galmuri11 is designed on a 12px grid → only 12/24/36px are crisp (UI_GUIDE §2). */
   --font-pixel: var(--font-galmuri), var(--font-pretendard), ui-monospace, monospace;
