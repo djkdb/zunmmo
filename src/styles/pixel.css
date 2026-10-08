@@ -366,6 +366,38 @@
     animation: pixel-pop 480ms steps(1, end) 2;
   }
 
+  /* Calendar day markers: 4×4 units, square, no radius (UI_GUIDE §7). */
+  .pixel-marker {
+    display: inline-block;
+    width: calc(var(--pixel-unit) * 4);
+    height: calc(var(--pixel-unit) * 4);
+    background-color: var(--marker, var(--color-text-muted));
+  }
+  .pixel-marker[data-kind="main"] {
+    --marker: var(--color-quest-main);
+  }
+  .pixel-marker[data-kind="side"] {
+    --marker: var(--color-quest-side);
+  }
+  .pixel-marker[data-kind="boss"] {
+    --marker: var(--color-quest-boss);
+  }
+  .pixel-marker[data-kind="hidden"] {
+    --marker: var(--color-quest-hidden);
+  }
+  .pixel-marker[data-kind="schedule"] {
+    --marker: var(--color-schedule-marker);
+  }
+  /* Completed: hollow square, so "done" does not rely on color. */
+  .pixel-marker[data-kind="done"] {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 var(--pixel-unit) var(--color-success);
+  }
+  /* Today's cell: 2-unit gold border drawn inside, no radius. */
+  .pixel-today {
+    box-shadow: inset 0 0 0 calc(var(--pixel-unit) * 2) var(--color-today);
+  }
+
   /* ───────── Pixel text ───────── */
 
   .font-pixel {

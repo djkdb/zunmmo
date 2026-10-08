@@ -161,6 +161,25 @@ export async function seedAdventure(email: string): Promise<void> {
         [rows[0].completion_id, date, at],
       );
     };
+    const at = (daysFromToday: number, hhmm: string) =>
+      new Date(`${addDays(today, daysFromToday)}T${hhmm}:00+09:00`).toISOString();
+    await c.query(
+      `insert into schedules (user_id, title, starts_at, ends_at, location, quest_id) values
+         ($1, 'AI 스터디', $2, $3, '도서관 3층', null),
+         ($1, '토요일 축구 경기', $4, $5, '학교 운동장', $6),
+         ($1, '컴퓨터네트워크 수업', $7, $8, null, null)`,
+      [
+        userId,
+        at(0, "19:00"),
+        at(0, "20:30"),
+        at(2, "15:00"),
+        at(2, "17:00"),
+        ids.get("토요일 축구하기"),
+        at(1, "10:30"),
+        at(1, "12:00"),
+      ],
+    );
+
     for (const q of quests.filter((q) => q.completed)) await play(q.title, 3);
     for (const [daysAgo, titles] of [
       [6, ["운동 30분", "영단어 30개"]],

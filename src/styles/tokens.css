@@ -135,6 +135,10 @@
   --color-boss-stamp: var(--color-crimson-700);
   --color-parchment-divider: var(--color-parchment-500);
 
+  /* Calendar: today's cell gets a 2-unit gold pixel border (UI_GUIDE §7) */
+  --color-today: var(--color-gold-400);
+  --color-schedule-marker: var(--color-ink-300);
+
   /* XP / progress — flat 3-band fill, never a gradient */
   --color-xp-fill: var(--color-gold-300);
   --color-xp-fill-highlight: var(--color-gold-100);
