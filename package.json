@@ -15,6 +15,7 @@
     "format:check": "prettier --check .",
     "art:build": "tsx scripts/art/build.ts",
     "art:check": "tsx scripts/art/check.ts",
+    "sim": "tsx scripts/sim/report.ts",
     "db:start": "supabase start -x studio,imgproxy,realtime,storage-api,edge-runtime,logflare,vector,supavisor,postgres-meta",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
