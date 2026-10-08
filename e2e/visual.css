@@ -1,0 +1,4 @@
+/* Visual snapshots compare the app, not Next's dev-tools badge. */
+nextjs-portal {
+  display: none !important;
+}
