@@ -5,6 +5,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -38,6 +39,9 @@ const TONE_CLASSES = {
   danger: "border-danger",
 } as const;
 
+/** Toasts with an action (Undo) stay twice as long and pause while hovered or focused. */
+const ACTION_DURATION = 10_000;
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
@@ -46,14 +50,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((current) => current.filter((t) => t.id !== id));
   }, []);
 
-  const show = useCallback(
-    (options: ToastOptions) => {
-      const id = nextId.current++;
-      setToasts((current) => [...current.slice(-(MAX_VISIBLE - 1)), { ...options, id }]);
-      window.setTimeout(() => dismiss(id), options.duration ?? DEFAULT_DURATION);
-    },
-    [dismiss],
-  );
+  const show = useCallback((options: ToastOptions) => {
+    const id = nextId.current++;
+    setToasts((current) => [...current.slice(-(MAX_VISIBLE - 1)), { ...options, id }]);
+  }, []);
 
   const value = useMemo(() => show, [show]);
 
@@ -65,36 +65,58 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         className="pointer-events-none fixed inset-x-4 bottom-24 z-50 flex flex-col items-center gap-2 lg:right-6 lg:bottom-6 lg:left-auto lg:items-end"
       >
         {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            role="status"
-            className={cn(
-              "pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-sm border border-l-4 bg-surface-raised px-4 py-3 text-small",
-              TONE_CLASSES[toast.tone ?? "default"],
-            )}
-          >
-            {toast.icon && (
-              <span aria-hidden className="shrink-0">
-                {toast.icon}
-              </span>
-            )}
-            <span className="flex-1">{toast.message}</span>
-            {toast.action && (
-              <button
-                type="button"
-                className="font-semibold text-primary-text hover:underline"
-                onClick={() => {
-                  toast.action?.onClick();
-                  dismiss(toast.id);
-                }}
-              >
-                {toast.action.label}
-              </button>
-            )}
-          </div>
+          <Toast key={toast.id} toast={toast} onDismiss={() => dismiss(toast.id)} />
         ))}
       </div>
     </ToastContext.Provider>
+  );
+}
+
+function Toast({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => void }) {
+  const [paused, setPaused] = useState(false);
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  });
+
+  useEffect(() => {
+    if (paused) return;
+    const duration = toast.duration ?? (toast.action ? ACTION_DURATION : DEFAULT_DURATION);
+    const timer = window.setTimeout(() => onDismissRef.current(), duration);
+    return () => window.clearTimeout(timer);
+  }, [paused, toast.duration, toast.action]);
+
+  return (
+    <div
+      role="status"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+      className={cn(
+        "pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-sm border border-l-4 bg-surface-raised px-4 py-3 text-small",
+        TONE_CLASSES[toast.tone ?? "default"],
+      )}
+    >
+      {toast.icon && (
+        <span aria-hidden className="shrink-0">
+          {toast.icon}
+        </span>
+      )}
+      <span className="flex-1">{toast.message}</span>
+      {toast.action && (
+        <button
+          type="button"
+          className="min-h-11 font-semibold text-primary-text hover:underline"
+          onClick={() => {
+            toast.action?.onClick();
+            onDismiss();
+          }}
+        >
+          {toast.action.label}
+        </button>
+      )}
+    </div>
   );
 }
 

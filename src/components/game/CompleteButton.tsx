@@ -20,8 +20,12 @@ export function CompleteButton({ questTitle, completed, onToggle, disabled }: Co
       type="button"
       aria-pressed={completed}
       aria-label={completed ? `완료 취소: ${questTitle}` : `퀘스트 완료: ${questTitle}`}
-      onClick={onToggle}
-      disabled={disabled}
+      // aria-disabled, not disabled: a disabled button drops keyboard focus mid-action, and the
+      // same button is how keyboard users undo (P5).
+      onClick={() => {
+        if (!disabled) onToggle();
+      }}
+      aria-disabled={disabled || undefined}
       className={cn("pixel-btn size-11 shrink-0 items-center justify-center", "inline-flex")}
       data-variant={completed ? "primary" : undefined}
       data-pressed={completed ? "" : undefined}
