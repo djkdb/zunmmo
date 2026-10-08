@@ -12,7 +12,7 @@
  *   public/icons/app-{192,512}.png, src/app/apple-icon.png   opaque app icons (PWA)
  *   art/palette/life-32.gpl                        Aseprite/GIMP palette
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { ADVENTURER } from "../../art/characters/adventurer";
@@ -21,6 +21,7 @@ import { LIFE_32, OUTFIT_PRESETS, type OutfitPreset } from "../../art/palette";
 import { SCENE_SPRITES } from "../../art/scene";
 import type { PixelGrid } from "../../art/types";
 import { createCanvas, cropGrid, drawGrid, encodePng, padGrid, validateGrid } from "./lib";
+import { OG_ALT, renderOgImage } from "./og";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const ICON_SIZE = 16;
@@ -248,7 +249,16 @@ function buildOgScene() {
   validateGrid("og-scene", grid, { w: W, h: H });
   const canvas = createCanvas(W * SCALE, H * SCALE);
   drawGrid(canvas, grid, 0, 0, { scale: SCALE });
-  write("src/app/_og/og-scene.png", encodePng(canvas));
+  const png = encodePng(canvas);
+  write("src/app/_og/og-scene.png", png);
+  return png;
+}
+
+/** The scene plus its title text → the static link-preview image (scripts/art/og.tsx). */
+async function buildOgImage(scene: Buffer) {
+  const font = readFileSync(join(ROOT, "src/app/_og/Galmuri11.og.ttf"));
+  write("src/app/opengraph-image.png", await renderOgImage(scene, font));
+  write("src/app/opengraph-image.alt.txt", OG_ALT);
 }
 
 /* ───────── Palette ───────── */
@@ -269,6 +279,6 @@ console.log("Building pixel art…");
 buildCharacter();
 buildIcons();
 buildScene();
-buildOgScene();
+const scene = buildOgScene();
 buildPalette();
-console.log("Done.");
+buildOgImage(scene).then(() => console.log("Done."));
