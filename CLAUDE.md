@@ -16,6 +16,7 @@
 | Game Master (추천·브리핑·템플릿, 규칙 기반) | `docs/GAME_MASTER.md` |
 | 스택, 디렉터리, DB 스키마, RLS, 테스트 | `docs/ARCHITECTURE.md` |
 | Phase 계획 | `docs/ROADMAP.md` |
+| 배포·런치 체크리스트·베타 운영 | `docs/DEPLOY.md` |
 | 아트 방향 | `design/ART_DIRECTION.md` |
 | 픽셀 제작·렌더링 규칙 | `design/PIXEL_RULES.md` |
 | 색 토큰 | `design/COLOR_PALETTE.md` |
@@ -36,7 +37,7 @@ pnpm typecheck      # next typegen && tsc --noEmit
 pnpm lint           # eslint (의존 방향 import 규칙 포함)
 pnpm test           # vitest — lib/game, 아트 원본·팔레트 검사 포함
 pnpm build          # next build
-pnpm format         # prettier
+pnpm format         # prettier (CI는 pnpm format:check)
 pnpm art:build      # /art 원본 → PNG 시트 + 타입 매니페스트 + 파비콘 (생성 파일은 손으로 고치지 않음)
 pnpm art:check      # 배포 PNG의 LIFE-32 팔레트/알파 검사
 VISUAL=1 pnpm test:e2e visual   # 픽셀 시스템 시각 회귀 (아트 변경 후 --update-snapshots)

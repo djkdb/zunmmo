@@ -260,6 +260,7 @@ user_achievements (
 - `uncomplete_quest(quest_id)` → `xp_result` — 오늘 게임 날짜의 완료만, `reversal` 기록. 오류: `UNDO_WINDOW_PASSED`
 - `clear_goal(goal_id, bonus)` — 모든 main/boss 완료 확인 + 보너스(≤ 1000, 값은 `goalClearBonus()`) 지급 + goal `cleared`
 - `player_progress()` — `SECURITY INVOKER` 집계 (완료 수, 타입별, 클리어 수, 새벽 완료, 플레이 날짜). 업적 평가 입력
+- `delete_my_account()` — 호출자 본인의 `auth.users` 행 삭제 → 모든 플레이어 테이블 cascade. 원장 행이 지워지는 유일한 경로 (삭제권 우선)
 - 내부 전용: `game_date_at(tz, day_start, at)`, `player_game_date(user)` — TS `gameDate()`와 같은 규칙 (DB 테스트로 일치 검증)
 
 업적 지급은 RPC가 아니다: 배지에 XP가 없으므로 `user_achievements`에 본인 행 INSERT만 허용한다 (GAME_SYSTEM §7).
@@ -291,6 +292,8 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=  # publishable key (구 anon key). 클라이언트 노출 OK — 권한은 RLS가 결정
 NEXT_PUBLIC_SITE_URL=                  # 메일 링크/OAuth 리다이렉트 기준 URL
 NEXT_PUBLIC_AUTH_GOOGLE_ENABLED=false  # Supabase에 Google provider를 설정했을 때만 true
+NEXT_PUBLIC_CONTACT_EMAIL=             # /privacy·/terms 문의처 (런치 전 필수)
+ERROR_WEBHOOK_URL=                     # (선택) 서버 오류 JSON 전송 대상 — instrumentation.ts
 SUPABASE_SERVICE_ROLE_KEY=             # (앱에서 사용하지 않음) 관리 스크립트 전용. 요청 경로에서 사용 금지
 ```
 - `.env.example`만 커밋 (로컬 기본값 포함), `.env.local`은 git 제외. 공개 env는 `src/lib/supabase/env.ts`에서 Zod로 검증해 누락 시 즉시 실패. `NEXT_PUBLIC_` 접두사가 없는 키는 클라이언트 번들에 들어가지 않도록 `server-only` 모듈에서만 import.

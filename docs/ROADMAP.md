@@ -115,15 +115,21 @@
 
 **Exit** (통과): 아트 기준선/팔레트 테스트, 상태 해석 테스트, 시각 스냅샷 2회 연속 일치
 
-## Phase 9 — Beta
-- 10–30명 클로즈드 베타, 피드백 채널, 이벤트 계측(PRODUCT_SPEC §9 지표)
-- 밸런스 조정(레벨 곡선/XP), 추천 가중치·GM 문장 다듬기, 버그 수정
-- PWA (manifest, 아이콘), 오류 모니터링
+## Phase 9 — Beta (준비 완료 ✅ — 운영은 배포 후)
+- [x] 설정: 시간대·하루 시작 시각·하루 모험 시간, 캐릭터 이름·외형 변경
+- [x] PWA: manifest, 아트 파이프라인에서 생성한 앱 아이콘(192/512, maskable 안전 영역), apple-icon
+- [x] 오류 모니터링: `instrumentation.ts` `onRequestError` → 구조화 로그 (+ 선택 웹훅), `global-error`, 404, 게임 화면 `error.tsx`
+- [x] 지표: `supabase/queries/beta-metrics.sql` — 서드파티 계측 없이 게임 테이블에서 집계
+- [x] CI: GitHub Actions — 정적 검사·단위·빌드 + 로컬 Supabase로 DB 테스트·E2E(`next start`)
+- [ ] (배포 후) 10–30명 클로즈드 베타, 피드백 채널, 주간 지표 기반 밸런스 조정 — [DEPLOY §5](./DEPLOY.md#5-베타-운영-phase-9)
 
-## Phase 10 — Production Launch
-- 개인정보처리방침/이용약관, 계정 삭제 기능
-- 백업/복구 확인, rate limit/비용 알림, 도메인/OG
-- 공개 + 런치 노트
+## Phase 10 — Production Launch (코드 준비 완료 ✅ — 런치 체크리스트는 운영 작업)
+- [x] 개인정보처리방침 `/privacy`, 이용약관 `/terms` (베타 초안 — 공개 전 법률 검토)
+- [x] 계정 삭제: `delete_my_account()` RPC (cascade), 입력 확인 다이얼로그, 작별 안내
+- [x] 배포 가이드·런치 체크리스트 [DEPLOY](./DEPLOY.md), 릴리스 노트 [RELEASE_NOTES](./RELEASE_NOTES.md)
+- [ ] (운영) 백업 복구 리허설, rate limit·비용 알림, 도메인/OG 확인, 법률 검토 — [DEPLOY §4](./DEPLOY.md#4-런치-체크리스트-phase-10)
+
+**Exit (코드)** (통과): E2E 34개 — 설정·계정 삭제·법적 고지·404·manifest 포함, `next start` 기준 / DB 테스트 30 / axe 0 (공개·플레이어 화면 전체)
 
 ---
 
