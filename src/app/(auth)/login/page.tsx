@@ -11,7 +11,7 @@ import { googleAuthEnabled } from "@/lib/supabase/env";
 export const metadata: Metadata = { title: "로그인" };
 
 const LOGIN_ERRORS: Record<string, string> = {
-  link: "로그인 링크가 만료됐거나 이미 사용됐어요. 코드를 새로 받아 주세요.",
+  link: "로그인 링크가 만료됐거나 다른 브라우저에서 열렸어요. 이 브라우저에서 다시 받아 주세요.",
   oauth: "Google 로그인에 실패했어요. 다시 시도해 주세요.",
 };
 
