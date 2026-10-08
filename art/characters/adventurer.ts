@@ -393,6 +393,79 @@ const STUDY_FRAMES = [
   stamp(READING, BOOK_FLIP, 11, 19),
 ];
 
+/** Laptop on the lap: the lid faces us, hands type at its sides, eyes on the screen. */
+const LAPTOP: readonly string[] = [
+  "OOOOOOOOOOOO",
+  "OmmmmmmmmmmO",
+  "OmmmmwwmmmmO",
+  "OmmmmmmmmmmO",
+  "OwwwwwwwwwwO",
+];
+const AT_LAPTOP = edit(stamp(STAND, LAPTOP, 10, 18), [
+  [14, 10, "S"],
+  [18, 10, "S"],
+  ...HANDS_AWAY,
+  [9, 21, "s"],
+  [22, 21, "S"],
+]);
+const TYPE_LEFT = edit(AT_LAPTOP, [
+  [9, 21, "3"],
+  [9, 20, "s"],
+]);
+const TYPE_RIGHT = edit(AT_LAPTOP, [
+  [22, 21, "3"],
+  [22, 20, "S"],
+]);
+const WORK_FRAMES = [TYPE_LEFT, AT_LAPTOP, TYPE_RIGHT, AT_LAPTOP];
+
+/**
+ * Star jumps with the feet planted (the baseline never moves): arms down → out → up.
+ * Arms out leave from the shoulder through the body outline at x=8 / x=23.
+ */
+const ARM_OUT_LEFT: readonly string[] = [".OOOOO.", "Os11111", "Ok33333", ".OOOOO."];
+const ARM_OUT_RIGHT: readonly string[] = [".OOOOO.", "22222sO", "33333kO", ".OOOOO."];
+const ARMS_OUT = edit(stamp(stamp(STAND, ARM_OUT_LEFT, 2, 16), ARM_OUT_RIGHT, 23, 16), [
+  ...HANDS_AWAY,
+]);
+/** A drop of sweat beside the head (teal effect pixel, no outline). */
+const sweat = (grid: readonly string[]) =>
+  edit(grid, [
+    [23, 6, "t"],
+    [23, 7, "t"],
+  ]);
+const EXERCISE_FRAMES = [STAND, ARMS_OUT, CHEER_UP, ARMS_OUT, sweat(STAND), sweat(ARMS_OUT)];
+
+/** Front-facing jog: alternate steps, the opposite hand pumps up to the chest, dust at the feet. */
+const pumpLeft = (grid: readonly string[]) =>
+  edit(grid, [
+    [9, 22, "3"],
+    [10, 22, "3"],
+    [9, 20, "s"],
+    [10, 20, "S"],
+  ]);
+const pumpRight = (grid: readonly string[]) =>
+  edit(grid, [
+    [21, 22, "3"],
+    [22, 22, "3"],
+    [21, 20, "S"],
+    [22, 20, "k"],
+  ]);
+const dust = (grid: readonly string[], x: number) =>
+  edit(grid, [
+    [x, 30, "w"],
+    [x + 1, 29, "w"],
+  ]);
+const RUN_FRAMES = [
+  pumpRight(STEP_LEFT),
+  pumpRight(dust(STEP_LEFT, 6)),
+  STAND,
+  BREATH_BODY,
+  pumpLeft(STEP_RIGHT),
+  pumpLeft(dust(STEP_RIGHT, 24)),
+  STAND,
+  BREATH_BODY,
+];
+
 export interface SpriteStateSource {
   frames: readonly PixelGrid[];
   /** Milliseconds per frame. */
@@ -445,6 +518,21 @@ export const ADVENTURER = {
       durations: [80, 80, 300],
       loop: false,
       next: "idle",
+    },
+    running: {
+      frames: RUN_FRAMES,
+      durations: [80, 80, 80, 80, 80, 80, 80, 80],
+      loop: true,
+    },
+    working: {
+      frames: WORK_FRAMES,
+      durations: [160, 160, 160, 160],
+      loop: true,
+    },
+    exercising: {
+      frames: EXERCISE_FRAMES,
+      durations: [120, 120, 120, 120, 120, 120],
+      loop: true,
     },
     studying: {
       frames: STUDY_FRAMES,

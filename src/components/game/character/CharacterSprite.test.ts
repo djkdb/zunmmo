@@ -12,22 +12,10 @@ describe("resolveCharacterState", () => {
     }
   });
 
-  it("uses drawn states directly and follows the fallback chain otherwise", () => {
-    for (const state of [
-      "idle",
-      "walking",
-      "celebrating",
-      "level-up",
-      "sleeping",
-      "thinking",
-      "surprised",
-      "studying",
-    ] as const) {
+  it("has every state drawn (Phase 8 + persona backlog)", () => {
+    for (const state of CHARACTER_STATES) {
       expect(resolveCharacterState(state)).toBe(state);
     }
-    expect(resolveCharacterState("running")).toBe("walking");
-    expect(resolveCharacterState("working")).toBe("idle");
-    expect(resolveCharacterState("exercising")).toBe("idle");
   });
 
   it("returns one-shot states to a drawn loop", () => {

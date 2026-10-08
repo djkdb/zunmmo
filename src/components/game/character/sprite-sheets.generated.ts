@@ -13,7 +13,7 @@ export const SPRITE_SHEETS = {
     },
     "sheetSize": {
       "w": 256,
-      "h": 256
+      "h": 352
     },
     "images": {
       "royal": "/sprites/characters/adventurer-royal.png",
@@ -107,8 +107,47 @@ export const SPRITE_SHEETS = {
         "loop": false,
         "next": "idle"
       },
-      "studying": {
+      "running": {
         "row": 7,
+        "frames": 8,
+        "durations": [
+          80,
+          80,
+          80,
+          80,
+          80,
+          80,
+          80,
+          80
+        ],
+        "loop": true
+      },
+      "working": {
+        "row": 8,
+        "frames": 4,
+        "durations": [
+          160,
+          160,
+          160,
+          160
+        ],
+        "loop": true
+      },
+      "exercising": {
+        "row": 9,
+        "frames": 6,
+        "durations": [
+          120,
+          120,
+          120,
+          120,
+          120,
+          120
+        ],
+        "loop": true
+      },
+      "studying": {
+        "row": 10,
         "frames": 4,
         "durations": [
           220,
