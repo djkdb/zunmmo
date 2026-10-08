@@ -205,6 +205,27 @@ describe.skipIf(!available)("schedules & adventures", () => {
     ).rejects.toThrow(/adventures_quest_ids_check/);
   });
 
+  it("remembers quests taken out of a day's plan", async () => {
+    const row = await asUser(
+      alice,
+      async (c) =>
+        (
+          await c.query(
+            `insert into adventures (game_date, quest_ids) values ('2026-10-11', $1)
+             returning removed_quest_ids`,
+            [[aliceQuest]],
+          )
+        ).rows[0],
+    );
+    expect(row.removed_quest_ids).toEqual([]);
+    // Even an id that is no longer the player's quest may stay in the history.
+    await asUser(alice, (c) =>
+      c.query("update adventures set removed_quest_ids = $1 where game_date = '2026-10-11'", [
+        [bobQuest],
+      ]),
+    );
+  });
+
   it("blocks anonymous access", async () => {
     await expect(asUser(null, (c) => c.query("select * from adventures"))).rejects.toThrow(
       /permission denied/,

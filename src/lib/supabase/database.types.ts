@@ -9,6 +9,7 @@ export type Database = {
           game_date: string;
           id: string;
           quest_ids: string[];
+          removed_quest_ids: string[];
           source: string;
           started_at: string;
           user_id: string;
@@ -19,6 +20,7 @@ export type Database = {
           game_date: string;
           id?: string;
           quest_ids: string[];
+          removed_quest_ids?: string[];
           source?: string;
           started_at?: string;
           user_id?: string;
@@ -28,6 +30,7 @@ export type Database = {
           game_date?: string;
           id?: string;
           quest_ids?: string[];
+          removed_quest_ids?: string[];
           source?: string;
           started_at?: string;
           user_id?: string;
