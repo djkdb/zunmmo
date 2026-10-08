@@ -106,11 +106,14 @@
 
 **Exit** (통과): E2E — 템플릿 온보딩 → 첫 XP (3분 제한 단언), 템플릿 프리필, 단계 입력 + 보스 / 브리핑·템플릿·추천 단위 테스트
 
-## Phase 8 — Animation + Pixel Polish
-- 캐릭터 상태: walking, studying, working, exercising, celebrating, sleeping, level-up
-- 퀘스트 타입별 완료 이펙트, 보스 처치 연출, 업적 배지 희귀도 프레임
-- 마이크로 인터랙션 정리, 성능 측정(애니메이션 중 60fps), 시각 회귀 스냅샷
-- 라이트 테마(선택)
+## Phase 8 — Animation + Pixel Polish ✅
+- [x] 캐릭터 상태: celebrating, level-up, sleeping, thinking, surprised, studying (walking은 Phase 2) — running/working/exercising은 폴백 유지
+- [x] 1회 재생 → idle 복귀 (`next` / `Sprite.then`), GM 브리핑·모험 진행에 따른 캐릭터 상태
+- [x] 보스 처치 토스트, 업적 토스트에 희귀도 메달, Questline 클리어 아이콘
+- [x] 시각 회귀 스냅샷: `/styleguide`의 art·pixel·game 섹션 (`VISUAL=1`, reduced-motion으로 결정적)
+- [ ] 60fps 측정은 Phase 9 Beta 체크리스트로 이동 (스프라이트는 background-position 스텝 — 레이아웃·페인트 비용 최소)
+
+**Exit** (통과): 아트 기준선/팔레트 테스트, 상태 해석 테스트, 시각 스냅샷 2회 연속 일치
 
 ## Phase 9 — Beta
 - 10–30명 클로즈드 베타, 피드백 채널, 이벤트 계측(PRODUCT_SPEC §9 지표)

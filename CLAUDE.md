@@ -39,6 +39,7 @@ pnpm build          # next build
 pnpm format         # prettier
 pnpm art:build      # /art 원본 → PNG 시트 + 타입 매니페스트 + 파비콘 (생성 파일은 손으로 고치지 않음)
 pnpm art:check      # 배포 PNG의 LIFE-32 팔레트/알파 검사
+VISUAL=1 pnpm test:e2e visual   # 픽셀 시스템 시각 회귀 (아트 변경 후 --update-snapshots)
 pnpm db:start       # 로컬 Supabase (Docker) — Postgres :54322, API :54321, Mailpit :54324
 pnpm db:reset       # 마이그레이션 재적용
 pnpm db:types       # DB 타입 생성 → src/lib/supabase/database.types.ts (마이그레이션 후 필수)
