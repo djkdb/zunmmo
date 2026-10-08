@@ -185,6 +185,14 @@ describe("recommendToday", () => {
     );
   });
 
+  it("orders same-batch questline steps by sortOrder", () => {
+    const at = "2026-09-01T00:00:00Z";
+    const second = quest({ type: "main", goalId: "g2", createdAt: at, sortOrder: 1 });
+    const first = quest({ type: "main", goalId: "g2", createdAt: at, sortOrder: 0 });
+    const { candidates } = recommendToday(input([second, first]));
+    expect(candidates[0]).toMatchObject({ questId: first.id, reason: "questline" });
+  });
+
   it("nudges toward stats that have been quiet this week", () => {
     const study = quest({ primaryStat: "int" });
     const friends = quest({ primaryStat: "soc" });

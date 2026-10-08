@@ -44,6 +44,8 @@ export interface RecommendQuest {
   goalId: string | null;
   estimatedMinutes: number | null;
   createdAt: string;
+  /** Tie-breaker for steps created in one batch. */
+  sortOrder?: number;
 }
 
 export interface RecommendInput {
@@ -126,7 +128,11 @@ function nextSteps(quests: readonly RecommendQuest[]): Set<string> {
       continue;
     }
     const current = byGoal.get(q.goalId);
-    if (!current || q.createdAt < current.createdAt) byGoal.set(q.goalId, q);
+    const earlier =
+      !current ||
+      q.createdAt < current.createdAt ||
+      (q.createdAt === current.createdAt && (q.sortOrder ?? 0) < (current.sortOrder ?? 0));
+    if (earlier) byGoal.set(q.goalId, q);
   }
   return new Set([...byGoal.values()].map((q) => q.id));
 }

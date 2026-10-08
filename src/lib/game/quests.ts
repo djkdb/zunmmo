@@ -10,6 +10,14 @@ export const DEFAULT_DIFFICULTY: Readonly<Record<QuestType, Difficulty>> = {
   hidden: 3,
 };
 
+/**
+ * GAME_MASTER §7 — steps entered together when a questline is created: the first one is small
+ * enough to start today, the rest are regular main quests.
+ */
+export const QUESTLINE_FIRST_STEP_DIFFICULTY: Difficulty = 2;
+export const QUESTLINE_NEXT_STEP_DIFFICULTY: Difficulty = 3;
+export const MAX_QUESTLINE_STEPS = 10;
+
 export const DEFAULT_STAT: Readonly<Record<QuestType, Stat>> = {
   main: "foc",
   daily: "vit",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type BriefingInput, allBriefingLines, briefing } from "../briefing";
+import { type BriefingInput, allBriefingLines, briefing, josa } from "../briefing";
 
 const base: BriefingInput = {
   today: "2026-10-08",
@@ -56,5 +56,15 @@ describe("briefing", () => {
     for (const line of allBriefingLines()) {
       expect(line).not.toMatch(/실패|패배|게으|왜 안|못했|벌칙|손해/);
     }
+  });
+});
+
+describe("josa", () => {
+  it("follows the final consonant of the last syllable", () => {
+    expect(josa("과제 제출", "이", "가")).toBe("과제 제출이");
+    expect(josa("중간고사", "이", "가")).toBe("중간고사가");
+    expect(josa("발표", "과", "와")).toBe("발표와");
+    expect(josa("시험", "과", "와")).toBe("시험과");
+    expect(josa("TOEIC", "이", "가")).toBe("TOEIC이(가)");
   });
 });

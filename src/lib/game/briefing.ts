@@ -32,18 +32,29 @@ export interface Briefing {
 
 type Fill = { boss?: string; n?: number };
 
+/**
+ * Korean particle after a word: `josa("과제 제출", "이", "가")` → "과제 제출이".
+ * Non-Hangul endings (English, digits) get the neutral "이(가)" form.
+ */
+export function josa(word: string, withFinal: string, withoutFinal: string): string {
+  const last = word.trim().at(-1) ?? "";
+  const code = last.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return `${word}${withFinal}(${withoutFinal})`;
+  return `${word}${code % 28 === 0 ? withoutFinal : withFinal}`;
+}
+
 const POOLS: Record<BriefingSituation, ReadonlyArray<(f: Fill) => string>> = {
   late_night: [
     () => "푹 쉬는 것도 모험의 일부야. 내일 다시 만나자.",
     () => "밤이 깊었어. 오늘은 여기까지 해도 충분해.",
   ],
   boss_today: [
-    (f) => `오늘은 ${f.boss}와 맞붙는 날이야. 준비한 만큼 보여 주자!`,
+    (f) => `오늘은 ${josa(f.boss!, "과", "와")} 맞붙는 날이야. 준비한 만큼 보여 주자!`,
     (f) => `${f.boss} 등장! 하나씩 차근차근 공략해 보자.`,
   ],
   boss_soon: [
     (f) => `${f.boss}까지 D-${f.n}. 오늘 준비 퀘스트로 체력을 깎아 두자.`,
-    (f) => `D-${f.n}, ${f.boss}가 다가오고 있어. 지금 한 걸음이 큰 차이를 만들어.`,
+    (f) => `D-${f.n}, ${josa(f.boss!, "이", "가")} 다가오고 있어. 지금 한 걸음이 큰 차이를 만들어.`,
   ],
   streak: [
     (f) => `${f.n}일 연속 모험 중! 오늘도 한 걸음만 더.`,
