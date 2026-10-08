@@ -188,7 +188,7 @@ quests (
   xp int not null check (xp between 0 and 1000),   -- lib/game/questXp 스냅샷
   primary_stat stat_type not null,
   status quest_status not null default 'active',
-  deadline timestamptz,
+  deadline date,                       -- 게임 날짜 (D-day 기준). expired는 읽을 때 계산
   scheduled_for date,                  -- 특정 날짜에 하기로 한 단발 퀘스트
   estimated_minutes smallint check (estimated_minutes between 5 and 1440),
   repeat_rule jsonb,                   -- GAME_SYSTEM §1.5, Zod 검증
@@ -260,6 +260,7 @@ user_achievements (
 
 ### 5.4 RPC 목록
 - `create_character(name, appearance)` — characters + 5개 character_stats 생성
+- `set_quest_archived(quest_id, archived)` / `set_goal_archived(goal_id, archived)` — 보관/복원 (status는 클라이언트가 직접 못 씀)
 - `complete_quest(quest_id, occurrence_date)` — [GAME_SYSTEM §2.1](./GAME_SYSTEM.md#21-완료-처리-db-함수-complete_quest)
 - `uncomplete_quest(completion_id)`
 - `grant_achievement(achievement_id)` — 조건 재검증은 앱 레이어, 멱등성은 DB

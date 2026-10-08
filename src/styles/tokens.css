@@ -129,6 +129,11 @@
   --color-warning-text: var(--color-ember-300);
   --color-info: var(--color-teal-400);
 
+  /* Text on parchment surfaces (notes, wanted posters) — COLOR_PALETTE §4 */
+  --color-on-parchment: var(--color-ink-900);
+  --color-on-parchment-muted: var(--color-parchment-900);
+  --color-boss-stamp: var(--color-crimson-700);
+
   /* XP / progress — flat 3-band fill, never a gradient */
   --color-xp-fill: var(--color-gold-300);
   --color-xp-fill-highlight: var(--color-gold-100);

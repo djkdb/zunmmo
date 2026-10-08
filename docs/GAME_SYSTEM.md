@@ -74,7 +74,8 @@ export function questXp(type: QuestType, difficulty: Difficulty): number {
 
 - `active`: 진행 가능. **daily는 항상 active**이며 완료는 회차별로 `quest_completions`에 기록한다.
 - `completed`: 단발 퀘스트 완료. `completed_at` 기록.
-- `expired`: 마감이 지난 미완료 boss/side. **XP 차감 없음.** UI 문구는 "기한 만료" (실패/패배 금지). 마감 연장 시 `active`로 복귀.
+- `expired`: 마감이 지난 미완료 boss/side/main. **XP 차감 없음.** UI 문구는 "기한 만료" (실패/패배 금지). **저장하지 않고 읽을 때 계산**한다 (`effectiveStatus()`) — 크론이 필요 없고, 마감을 연장하면 자동으로 `active`로 보인다.
+- 마감(`deadline`)은 타임스탬프가 아니라 **게임 날짜(date)**다. D-day는 `daysBetween(오늘 게임 날짜, deadline)`.
 - `archived`: 소프트 삭제. 하드 삭제는 `xp_logs`가 없는 퀘스트만 허용.
 
 ### 1.5 반복 규칙 (`repeat_rule`)

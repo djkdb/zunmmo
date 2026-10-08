@@ -25,7 +25,7 @@ export function EmptyState({
       <p
         className={cn(
           "max-w-xs text-body",
-          surface === "parchment" ? "text-parchment-900" : "text-text-secondary",
+          surface === "parchment" ? "text-on-parchment-muted" : "text-text-secondary",
         )}
       >
         {message}

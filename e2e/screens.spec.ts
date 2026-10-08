@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { readSignInCode, uniqueEmail } from "./helpers";
+import { seedAdventure } from "./seed";
 
 /**
  * Visual review captures (not assertions): `SCREENSHOTS=1 pnpm test:e2e screens`.
@@ -41,7 +42,11 @@ test("capture signed-in screens", async ({ page }, info) => {
 
   await expect(page).toHaveURL(/\/adventure/);
   await expect(page.locator("main header").filter({ visible: true })).toBeVisible();
-  await shot("04-adventure");
+  await shot("04-adventure-empty");
+
+  await seedAdventure(email);
+  await page.goto("/adventure");
+  await shot("05-adventure");
 
   for (const path of (process.env.SCREEN_PATHS ?? "").split(",").filter(Boolean)) {
     await page.goto(path);

@@ -9,8 +9,7 @@ import { cn } from "@/lib/utils/cn";
 import { NAV_ITEMS, activeHref } from "./nav-items";
 
 /** Desktop sidebar (UI_GUIDE §1.2). */
-export function SideNav() {
-  const active = activeHref(usePathname());
+export function SideNavView({ active }: { active: string | null }) {
   const links = NAV_ITEMS.filter((i) => !i.primary);
   const add = NAV_ITEMS.find((i) => i.primary);
   return (
@@ -64,4 +63,9 @@ export function SideNav() {
       </Link>
     </nav>
   );
+}
+
+/** Reads the URL, so it must render inside <Suspense> (dynamic routes can't prerender it). */
+export function SideNav() {
+  return <SideNavView active={activeHref(usePathname())} />;
 }

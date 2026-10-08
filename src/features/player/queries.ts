@@ -5,7 +5,7 @@ import { cache } from "react";
 
 import type { OutfitPreset } from "@/components/game/character/CharacterSprite";
 import { outfitOf } from "@/features/character/schemas";
-import { STATS, type Stat } from "@/lib/game";
+import { type GameDate, STATS, type Stat, gameDate } from "@/lib/game";
 import { createClient } from "@/lib/supabase/server";
 
 export interface Player {
@@ -78,4 +78,9 @@ export async function requireCharacter(): Promise<PlayerWithCharacter> {
   const player = await getPlayer();
   if (!player.character) redirect("/onboarding");
   return player as PlayerWithCharacter;
+}
+
+/** Today's game date for the player (their timezone and day-start hour, GAME_SYSTEM §1.6). */
+export function playerToday(player: Pick<Player, "profile">, now: Date = new Date()): GameDate {
+  return gameDate(now, player.profile.timezone, player.profile.dayStartHour);
 }

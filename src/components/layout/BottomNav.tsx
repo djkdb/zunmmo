@@ -9,8 +9,7 @@ import { cn } from "@/lib/utils/cn";
 import { NAV_ITEMS, activeHref } from "./nav-items";
 
 /** Mobile tab bar (UI_GUIDE §1.1): 5 tabs, raised center "add quest", safe-area aware. */
-export function BottomNav() {
-  const active = activeHref(usePathname());
+export function BottomNavView({ active }: { active: string | null }) {
   return (
     <nav
       aria-label="주요 메뉴"
@@ -57,4 +56,9 @@ export function BottomNav() {
       </ul>
     </nav>
   );
+}
+
+/** Reads the URL, so it must render inside <Suspense> (dynamic routes can't prerender it). */
+export function BottomNav() {
+  return <BottomNavView active={activeHref(usePathname())} />;
 }

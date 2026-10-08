@@ -115,6 +115,9 @@
 | `--color-danger` | crimson-400 | crimson-500 | 오류, 삭제 |
 | `--color-warning` | ember-400 | ember-500 | 경고, 마감 임박 |
 | `--color-info` | teal-400 | teal-500 | 정보 |
+| `--color-on-parchment` | ink-900 | ink-900 | 양피지 위 본문 (12.59:1) |
+| `--color-on-parchment-muted` | parchment-900 | parchment-900 | 양피지 위 보조 텍스트 (7.27:1) |
+| `--color-boss-stamp` | crimson-700 | crimson-700 | 현상수배서 D-day 도장 (양피지 위 6.73:1 — crimson-500은 3.54:1이라 불가) |
 
 ### 3.1 XP / Progress
 | 토큰 | 값 | 설명 |

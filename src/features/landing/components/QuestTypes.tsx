@@ -43,7 +43,7 @@ export function QuestTypes() {
                   <div className="flex flex-col items-start gap-2">
                     <QuestTypeTag type={type} />
                     <p className="text-small">{description}</p>
-                    <p className="text-caption text-parchment-900">예: {example}</p>
+                    <p className="text-caption text-on-parchment-muted">예: {example}</p>
                   </div>
                 </PixelFrame>
               </li>

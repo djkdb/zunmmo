@@ -152,7 +152,9 @@
   }
 
   .pixel-btn:focus-visible,
-  .pixel-focus:focus-visible {
+  .pixel-focus:focus-visible,
+  /* Card with a stretched link: ring the whole card when its link is focused. */
+  .pixel-frame:has(a:focus-visible) {
     outline: none;
     --pf-ring:
       0 calc(var(--u) * -2) 0 0 var(--color-focus), 0 calc(var(--u) * 2) 0 0 var(--color-focus),

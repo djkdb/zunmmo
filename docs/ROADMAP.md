@@ -65,14 +65,15 @@
 
 **Exit** (통과): E2E 10/10 — dev와 프로덕션 빌드(`E2E_PROD=1`) 모두, 타 사용자 데이터 접근 불가·XP 직접 쓰기 불가 테스트 통과
 
-## Phase 4 — Quest Engine
-- `goals`, `quests`, `quest_completions` 마이그레이션 + RLS
-- 퀘스트 생성/수정 폼 (빠른 추가: 제목 + 타입 + 난이도 3필드), 반복 규칙, 마감
-- 퀘스트 목록(타입 탭, 필터), 상세, archive
-- 대시보드 v1: Character / Level / XP / Main / Daily / Side / Boss (실데이터)
-- 낙관적 UI 완료 (임시: 단순 상태 변경 — Phase 5에서 RPC로 교체)
+## Phase 4 — Quest Engine ✅
+- [x] 마이그레이션 `goals`/`quests` + RLS·컬럼 권한, 타입별 제약(boss 마감·daily 반복·main 퀘스트라인), 보관 RPC
+- [x] `lib/game`: 반복 규칙(Zod) + 오늘 회차 판정, 읽을 때 계산하는 "기한 만료", XP 가중 퀘스트라인 진행률, 타입별 기본값
+- [x] 퀘스트 추가(빠른 입력 + 날짜 칩 + 더 보기), 상세·수정·보관/복원, 게시판(타입 필터·보관함)
+- [x] 대시보드 v1: 보스 현상수배서(7일 이내 최단), 메인 퀘스트라인 맵, 오늘의 데일리, 사이드 3개
+- [x] `Textarea`, `Select`, `ChoiceGroup`, `DifficultyPicker`
+- [ ] 완료 버튼 → Phase 5 (XP 트랜잭션과 함께)
 
-**Exit**: 퀘스트 생성→목록→완료 2탭 이내, 빈/로딩/오류 상태 모두 디자인 적용
+**Exit** (통과): E2E — 4종 생성 + 보스 마감 검증 + 대시보드 표시, 수정·보관·복원 / DB 테스트 14 / axe 0
 
 ## Phase 5 — XP + Level + Achievement
 - `xp_logs`, `achievements`, `user_achievements` + RPC (`complete_quest`, `uncomplete_quest`, `grant_achievement`, `clear_goal`)

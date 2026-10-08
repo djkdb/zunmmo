@@ -65,7 +65,7 @@ export function HowToPlay() {
               <PixelIcon name="ui-plus" />
               <span className="text-title">컴퓨터네트워크 과제 제출</span>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-small text-parchment-900">
+            <div className="flex flex-wrap items-center gap-2 text-small text-on-parchment-muted">
               <QuestTypeTag type="boss" />
               <PixelStars value={4} />
               <span>금요일까지</span>

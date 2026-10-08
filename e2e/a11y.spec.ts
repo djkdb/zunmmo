@@ -5,7 +5,7 @@ import { startNewGame } from "./helpers";
 
 /** WCAG 2.1 AA via axe on every main screen (CLAUDE.md 접근성). Extend the list as screens ship. */
 const PUBLIC_PAGES = ["/", "/login"];
-const PLAYER_PAGES = ["/adventure", "/settings"];
+const PLAYER_PAGES = ["/adventure", "/quests", "/quests/new", "/settings"];
 
 async function audit(page: import("@playwright/test").Page) {
   await page.waitForLoadState("networkidle");
