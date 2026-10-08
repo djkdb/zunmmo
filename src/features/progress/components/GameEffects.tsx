@@ -5,6 +5,9 @@ import { type ReactNode, createContext, useCallback, useContext, useMemo, useSta
 import { RARITY_META } from "@/components/game/AchievementBadge";
 import { CharacterSprite } from "@/components/game/character/CharacterSprite";
 import { LevelBadge } from "@/components/game/LevelBadge";
+import { achievementIcon } from "@/components/game/achievement-icon";
+import { PixelFrame } from "@/components/pixel/PixelFrame";
+import { PixelIcon } from "@/components/pixel/PixelIcon";
 import { PixelButton } from "@/components/pixel/PixelButton";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
@@ -41,10 +44,20 @@ export function GameEffectsProvider({ children }: { children: ReactNode }) {
   const celebrate = useCallback(
     (outcome: CompletionOutcome) => {
       const parts = [`퀘스트 완료! ${formatXpGain(outcome.xpChange)}`];
+      if (outcome.questType === "boss") {
+        parts.unshift("보스 처치!");
+        toast({
+          tone: "success",
+          icon: <PixelIcon name="quest-boss" scale={2} />,
+          message: `BOSS DEFEATED — ${outcome.questTitle}`,
+          duration: 7000,
+        });
+      }
       if (outcome.goalClear) {
         parts.push(`퀘스트라인 클리어 보너스 ${formatXpGain(outcome.goalClear.bonus)}`);
         toast({
           tone: "success",
+          icon: <PixelIcon name="quest-main" scale={2} />,
           message: `QUESTLINE CLEAR — ${outcome.goalClear.title} ${formatXpGain(outcome.goalClear.bonus)}`,
           duration: 7000,
         });
@@ -53,6 +66,16 @@ export function GameEffectsProvider({ children }: { children: ReactNode }) {
         parts.push(`업적 해금: ${badge.name}`);
         toast({
           tone: "success",
+          icon: (
+            <PixelFrame
+              flat
+              variant="raised"
+              data-rarity={badge.rarity}
+              className="flex size-10 items-center justify-center"
+            >
+              <PixelIcon name={achievementIcon(badge.icon)} />
+            </PixelFrame>
+          ),
           message: `${RARITY_META[badge.rarity].label} 업적 해금 — ${badge.name}`,
           duration: 7000,
         });

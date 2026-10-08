@@ -1,10 +1,11 @@
 import type { OutfitPreset } from "@/components/game/character/CharacterSprite";
-import type { Rarity } from "@/lib/game";
+import type { QuestType, Rarity } from "@/lib/game";
 
 /** What a quest completion produced, for the reward beats (GameEffects). */
 export interface CompletionOutcome {
   questId: string;
   questTitle: string;
+  questType: QuestType;
   /** For the level-up scene. */
   character: { name: string; outfit: OutfitPreset };
   xpChange: number;

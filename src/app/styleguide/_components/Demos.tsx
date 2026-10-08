@@ -3,9 +3,11 @@
 import { useState } from "react";
 
 import {
+  CHARACTER_STATES,
   CharacterSprite,
   OUTFIT_PRESETS,
   type OutfitPreset,
+  resolveCharacterState,
 } from "@/components/game/character/CharacterSprite";
 import { CompleteButton } from "@/components/game/CompleteButton";
 import { LevelBadge } from "@/components/game/LevelBadge";
@@ -58,6 +60,7 @@ export function CharacterDemo() {
   const [outfit, setOutfit] = useState<OutfitPreset>("royal");
   const [totalXp, setTotalXp] = useState(23_420);
   const [message, setMessage] = useState("");
+  const [replay, setReplay] = useState(0);
   const level = levelFromXp(totalXp);
 
   function gain(xp: number) {
@@ -94,6 +97,37 @@ export function CharacterDemo() {
         <PixelButton onClick={() => gain(500)} variant="primary">
           +500 XP (BOSS)
         </PixelButton>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-small text-text-muted">
+          상태 (CHARACTER_GUIDE §5) — 1회 재생 상태는 누르면 다시 재생, 끝나면 idle로 돌아가요
+        </p>
+        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {CHARACTER_STATES.map((state) => (
+            <li key={state}>
+              <button
+                type="button"
+                onClick={() => setReplay((n) => n + 1)}
+                className="flex w-full flex-col items-center gap-1 rounded-sm p-1 hover:bg-surface-raised"
+              >
+                <CharacterSprite
+                  key={`${state}-${replay}`}
+                  outfit={outfit}
+                  state={state}
+                  scale={2}
+                  label={`${state} 상태`}
+                  shadow={false}
+                />
+                <span className="font-pixel text-pixel text-text-muted">{state}</span>
+                {resolveCharacterState(state) !== state && (
+                  <span className="text-caption text-text-muted">
+                    → {resolveCharacterState(state)}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
       <fieldset className="flex flex-wrap gap-4">
         <legend className="mb-2 text-small text-text-muted">외형 프리셋 (palette swap)</legend>

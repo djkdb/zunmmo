@@ -227,7 +227,8 @@ async function todayPanel(
   if (steps.length && steps.some((s) => !s.done)) {
     return {
       panel: { state: "active", steps, briefing: adventure?.briefing ?? null, today },
-      mood: "walking",
+      // On the way to the next step; a book in hand when that step grows INT (CHARACTER_GUIDE §5).
+      mood: steps.find((s) => !s.done)?.quest.primaryStat === "int" ? "studying" : "walking",
     };
   }
   const recommendation = await recommendationFor(player, today, loaded);

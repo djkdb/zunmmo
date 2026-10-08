@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils/cn";
 export interface ToastOptions {
   message: string;
   tone?: "default" | "success" | "danger";
+  /** Leading art, e.g. a badge medallion or the boss icon. */
+  icon?: ReactNode;
   /** e.g. Undo for an optimistic completion (UI_GUIDE §5.3). */
   action?: { label: string; onClick: () => void };
   /** Milliseconds before auto-dismiss. */
@@ -71,6 +73,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               TONE_CLASSES[toast.tone ?? "default"],
             )}
           >
+            {toast.icon && (
+              <span aria-hidden className="shrink-0">
+                {toast.icon}
+              </span>
+            )}
             <span className="flex-1">{toast.message}</span>
             {toast.action && (
               <button

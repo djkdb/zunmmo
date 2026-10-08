@@ -241,7 +241,7 @@ export async function completeQuest(questId: string): Promise<Result<CompletionO
 
   const { data: quest } = await supabase
     .from("quests")
-    .select("title, goal_id")
+    .select("title, type, goal_id")
     .eq("id", questId)
     .single();
   const before = Number(data.total_xp_before);
@@ -255,6 +255,7 @@ export async function completeQuest(questId: string): Promise<Result<CompletionO
   return ok({
     questId,
     questTitle: quest?.title ?? "",
+    questType: quest?.type ?? "side",
     character: { name: player.character.name, outfit: player.character.outfit },
     xpChange: data.xp_change ?? 0,
     totalXpBefore: before,
