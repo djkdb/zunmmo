@@ -114,6 +114,52 @@ describe.skipIf(!available)("goals & quests", () => {
     ).rejects.toThrow(/QUEST_NOT_FOUND/);
   });
 
+  it("splits a quest in place, keeping questline order", async () => {
+    const ids = await asUser(alice, async (c) => {
+      const { rows } = await c.query(
+        `insert into quests (goal_id, title, type, difficulty, xp, primary_stat, sort_order)
+         select $1, t.title, 'main', 3, 70, 'foc', t.n
+           from (values ('기획', 0), ('결제 모듈 붙이기', 1), ('배포', 2)) as t(title, n)
+         returning id, title`,
+        [aliceGoal],
+      );
+      return Object.fromEntries(rows.map((r) => [r.title, r.id as string]));
+    });
+    const parts = [
+      { title: "결제 API 조사", difficulty: 2, xp: 40, estimated_minutes: 40 },
+      { title: "결제 화면", difficulty: 2, xp: 40, estimated_minutes: 40 },
+    ];
+    const returned = await asUser(alice, async (c) =>
+      (
+        await c.query("select split_quest($1, $2) as id", [
+          ids["결제 모듈 붙이기"],
+          JSON.stringify(parts),
+        ])
+      ).rows.map((r) => r.id),
+    );
+    expect(returned[0]).toBe(ids["결제 모듈 붙이기"]);
+    const order = await asUser(alice, async (c) =>
+      (
+        await c.query(
+          "select title from quests where goal_id = $1 and type = 'main' order by created_at, sort_order",
+          [aliceGoal],
+        )
+      ).rows.map((r) => r.title),
+    );
+    expect(order.slice(-4)).toEqual(["기획", "결제 API 조사", "결제 화면", "배포"]);
+
+    await expect(
+      asUser(bob, (c) =>
+        c.query("select split_quest($1, $2)", [ids["배포"], JSON.stringify(parts)]),
+      ),
+    ).rejects.toThrow(/QUEST_NOT_FOUND/);
+    await expect(
+      asUser(alice, (c) =>
+        c.query("select split_quest($1, $2)", [ids["배포"], JSON.stringify(parts.slice(0, 1))]),
+      ),
+    ).rejects.toThrow(/VALIDATION_FAILED/);
+  });
+
   it("isolates players", async () => {
     const seen = await asUser(bob, async (c) => ({
       quests: (await c.query("select 1 from quests")).rowCount,

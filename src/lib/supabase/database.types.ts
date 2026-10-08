@@ -523,6 +523,7 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      split_quest: { Args: { p_parts: Json; p_quest_id: string }; Returns: string[] };
       uncomplete_quest: {
         Args: { p_quest_id: string };
         Returns: Database["public"]["CompositeTypes"]["xp_result"];
