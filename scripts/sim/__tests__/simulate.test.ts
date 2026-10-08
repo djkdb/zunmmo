@@ -1,15 +1,90 @@
 import { describe, expect, it } from "vitest";
 
-import { GAP_MINUTES, LIGHT_PACE, daysBetween, isoWeekStart } from "../../../src/lib/game";
-import { SIM_PERSONAS } from "../personas";
-import { type SimResult, simulate, summarize } from "../simulate";
+import {
+  GAP_MINUTES,
+  LIGHT_PACE,
+  MAX_PLAN_SIZE,
+  RETRY_DAYS,
+  SNOOZE_DAYS,
+  SPLIT_XP_ALLOWANCE,
+  addDays,
+  daysBetween,
+  isoWeekStart,
+  questXp,
+} from "../../../src/lib/game";
+import { HYUNWOO, SIM_PERSONAS, SOYEON, TAEO } from "../personas";
+import { type SimResult, rootId, simulate, summarize } from "../simulate";
 
 const DAYS = 28;
-const runs: SimResult[] = SIM_PERSONAS.map((p) => simulate(p, DAYS));
+const runs: SimResult[] = SIM_PERSONAS.flatMap((p) => [
+  simulate(p, DAYS),
+  simulate(p, DAYS, { engaged: true }),
+]);
+const label = (r: SimResult) => `${r.persona.name} · ${r.engaged ? "engaged" : "passive"}`;
 
-describe.each(runs.map((r) => [r.persona.name, r] as const))("4-week life: %s", (_name, run) => {
+describe.each(runs.map((r) => [label(r), r] as const))("4-week life: %s", (_name, run) => {
   it("is deterministic", () => {
-    expect(summarize(simulate(run.persona, DAYS))).toEqual(summarize(run));
+    expect(summarize(simulate(run.persona, DAYS, { engaged: run.engaged }))).toEqual(
+      summarize(run),
+    );
+  });
+
+  it("plays plans the app allows", () => {
+    for (const day of run.days) {
+      expect(day.plan.length, day.date).toBeLessThanOrEqual(MAX_PLAN_SIZE);
+      expect(new Set(day.plan).size, day.date).toBe(day.plan.length);
+      if (!run.engaged) {
+        expect(day.plan, day.date).toEqual(
+          day.played ? day.recommendation.picks.map((p) => p.questId) : [],
+        );
+        expect(day.actions, day.date).toEqual([]);
+      }
+    }
+  });
+
+  it("splits within the XP allowance, keeping the parts together", () => {
+    const ids = [...run.quests.keys()];
+    for (const action of run.days.flatMap((d) => d.actions)) {
+      if (action.kind !== "split") continue;
+      const before = action.from!;
+      const parts = action.detail!.split(",");
+      const partXp = parts.reduce((sum, id) => {
+        const q = run.quests.get(id)!;
+        return sum + questXp(q.type, q.difficulty);
+      }, 0);
+      expect(partXp).toBeLessThanOrEqual(
+        questXp(before.type, before.difficulty) * SPLIT_XP_ALLOWANCE,
+      );
+      const at = ids.indexOf(parts[0]!);
+      expect(ids.slice(at, at + parts.length)).toEqual(parts);
+      expect(parts.every((id) => rootId(id) === action.questId)).toBe(true);
+    }
+  });
+
+  it("does not offer a removed quest again while it rests", () => {
+    const lastDrop = new Map<string, number>();
+    for (const day of run.days) {
+      for (const action of day.actions) {
+        if (action.kind !== "drop") continue;
+        const previous = lastDrop.get(action.questId);
+        if (previous !== undefined) {
+          expect(day.day - previous, day.date).toBeGreaterThan(SNOOZE_DAYS);
+        }
+        lastDrop.set(action.questId, day.day);
+      }
+    }
+  });
+
+  it("retries only expired, non-boss quests for a fresh week", () => {
+    for (const day of run.days) {
+      for (const action of day.actions) {
+        if (action.kind !== "retry") continue;
+        const seen = run.days[day.day - 1]?.seen.find((q) => q.id === action.questId);
+        expect(action.detail).toBe(addDays(day.date, RETRY_DAYS));
+        expect(run.quests.get(action.questId)!.type).not.toBe("boss");
+        if (seen) expect(seen.deadline! < day.date, day.date).toBe(true);
+      }
+    }
   });
 
   it("never takes XP away", () => {
@@ -84,5 +159,30 @@ describe.each(runs.map((r) => [r.persona.name, r] as const))("4-week life: %s", 
         if (openPrep) expect(daysBetween(day.date, boss.deadline), day.date).toBeLessThanOrEqual(1);
       }
     }
+  });
+});
+
+describe("what the tools change", () => {
+  const pair = (persona: (typeof SIM_PERSONAS)[number]) => ({
+    passive: summarize(simulate(persona, DAYS)),
+    engaged: summarize(simulate(persona, DAYS, { engaged: true })),
+  });
+
+  it("splitting unblocks a questline stuck behind a step longer than the day", () => {
+    const { passive, engaged } = pair(HYUNWOO);
+    expect(passive.questlinesCleared).toEqual([]);
+    expect(engaged.actions.split).toBeGreaterThan(0);
+    expect(engaged.questlinesCleared.map((q) => q.goal)).toEqual(["launch"]);
+  });
+
+  it("retrying after a break turns open deadlines into late finishes, never XP lost", () => {
+    for (const persona of [SOYEON, TAEO]) {
+      const { passive, engaged } = pair(persona);
+      if (engaged.actions.retry === 0) continue;
+      expect(engaged.deadlines.open, persona.name).toBeLessThan(passive.deadlines.open);
+    }
+    const { passive, engaged } = pair(SOYEON);
+    expect(engaged.actions.retry).toBeGreaterThan(0);
+    expect(engaged.deadlines.late).toBeGreaterThan(passive.deadlines.late);
   });
 });

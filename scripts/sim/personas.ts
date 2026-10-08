@@ -29,6 +29,9 @@ export const JIMIN: SimPersona = {
   // Takes the GM's night-owl tip after the first week: the day now starts at 07:00.
   dayStartHour: (day) => (day < 7 ? 4 : 7),
   diligence: 0.85,
+  // Splits long chapters on class-heavy days, adds one more when on a roll, and keeps
+  // putting off the club minutes (×).
+  policy: { splitTooBig: true, topUp: 1, dropIds: ["club"] },
   scheduleMinutes: { 1: 180, 2: 90, 3: 180, 4: 90, 5: 60 },
   quests: [
     {
@@ -130,6 +133,8 @@ export const HYUNWOO: SimPersona = {
   capacity: 90,
   playHour: () => 8,
   diligence: 0.75,
+  // Splits the payment module (the e2e P2 journey).
+  policy: { splitTooBig: true },
   quests: [
     {
       id: "launch-1",
@@ -151,11 +156,11 @@ export const HYUNWOO: SimPersona = {
     },
     {
       id: "launch-3",
-      title: "결제 테스트하기",
+      title: "결제 모듈 붙이기",
       type: "main",
-      difficulty: 2,
+      difficulty: 3,
       stat: "foc",
-      minutes: 40,
+      minutes: 120,
       goal: "launch",
     },
     {
@@ -198,6 +203,8 @@ export const SOYEON: SimPersona = {
   capacity: 120,
   playHour: (day) => (day < 3 || day >= 24 ? 10 : null),
   diligence: 0.8,
+  // Back on day 24: "다시 도전" on what expired while she was away, split if it is too big.
+  policy: { retryExpired: true, splitTooBig: true },
   quests: [
     daily("yoga", "요가 20분", 20, "vit", 2),
     daily("walk", "아이와 산책", 30, "soc"),
@@ -238,6 +245,8 @@ export const TAEO: SimPersona = {
   capacity: 240,
   playHour: () => 10,
   diligence: 0.8,
+  // Splits the icon set between meetings; retries anything that slipped.
+  policy: { splitTooBig: true, retryExpired: true },
   scheduleMinutes: { 1: 270, 2: 210, 3: 270, 4: 240, 5: 180 },
   quests: [
     daily("sketch", "크로키 15분", 15, "cre"),
@@ -305,7 +314,7 @@ export const TAEO: SimPersona = {
   },
 };
 
-/** P5 하늘 — eight small routines every day, does everything the GM picks. */
+/** P5 하늘 — eight small routines every day, does everything the GM picks (no tools needed). */
 export const HANEUL: SimPersona = {
   id: "p5-haneul",
   name: "하늘 (루틴 8개, 매일)",
