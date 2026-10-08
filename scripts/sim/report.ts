@@ -1,14 +1,29 @@
 /**
  * `pnpm sim` — run the five persona lives for four weeks on the current rules and print the
  * balance report (docs/SIMULATION.md is this output, regenerated after rule changes).
+ * `pnpm sim --compare beta.json` — compare beta metrics (beta-metrics.sql query 7) with it.
  */
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 import { LEVEL_CURVE, achievementById, xpToReachLevel } from "../../src/lib/game";
 import { SIM_PERSONAS } from "./personas";
+import { compareBeta, comparisonMarkdown, parseBetaMetrics } from "./compare";
 import { simulate, summarize } from "./simulate";
 
 const DAYS = 28;
+
+const compareAt = process.argv.indexOf("--compare");
+if (compareAt >= 0) {
+  const path = process.argv[compareAt + 1];
+  if (!path) throw new Error("usage: pnpm sim --compare <beta.json>");
+  const beta = parseBetaMetrics(JSON.parse(readFileSync(path, "utf8")));
+  const runs = SIM_PERSONAS.flatMap((p) => [
+    simulate(p, DAYS),
+    simulate(p, DAYS, { engaged: true }),
+  ]);
+  console.log(comparisonMarkdown(beta, compareBeta(beta, runs)));
+  process.exit(0);
+}
 
 function curveLabel(): string {
   const steps = [2, 3, 4, 5, 10].map((l) => `Lv.${l} ${xpToReachLevel(l).toLocaleString("ko-KR")}`);

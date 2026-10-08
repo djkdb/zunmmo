@@ -46,7 +46,7 @@ from active_days d
 left join public.adventures a on a.user_id = d.user_id and a.game_date = d.occurrence_date;
 
 -- 5. Recommendation keep: share of picked quests that were completed the same game day.
--- (Players cannot remove single picks yet, so "kept" is measured as "played".)
+-- (Quests taken out of the plan are no longer in quest_ids; see removed_quest_ids in 7.)
 select
   count(*) as picked,
   count(c.id) as completed,
@@ -58,3 +58,52 @@ left join public.quest_completions c
 
 -- 6. Time-to-complete is a UI property (one tap on the dashboard check), verified by the
 --    e2e suite rather than measured here.
+
+-- 7. Balance vs the four-week simulation (docs/SIMULATION.md). Returns ONE json value — save
+--    it as beta.json and run `pnpm sim --compare beta.json`. Only percentiles and averages
+--    leave the database; levels are derived in TypeScript from the XP (lib/game owns the curve).
+with week1 as (
+  select u.id, coalesce(sum(x.amount), 0) as xp
+  from auth.users u
+  left join public.xp_logs x on x.user_id = u.id and x.created_at < u.created_at + interval '7 days'
+  where u.created_at < now() - interval '7 days'
+  group by u.id
+),
+month1 as (
+  select
+    u.id,
+    coalesce((
+      select sum(x.amount) from public.xp_logs x
+      where x.user_id = u.id and x.created_at < u.created_at + interval '28 days'
+    ), 0) as xp,
+    (
+      select count(distinct c.occurrence_date) from public.quest_completions c
+      where c.user_id = u.id and c.completed_at < u.created_at + interval '28 days'
+    ) as active_days
+  from auth.users u
+  where u.created_at < now() - interval '28 days'
+),
+plans as (
+  select
+    cardinality(a.quest_ids) as size,
+    cardinality(a.removed_quest_ids) as removed,
+    (
+      select count(*) from unnest(a.quest_ids) as picked(quest_id)
+      join public.quest_completions c
+        on c.quest_id = picked.quest_id and c.occurrence_date = a.game_date
+    ) as done
+  from public.adventures a
+)
+select json_build_object(
+  'players_week1', (select count(*) from week1),
+  'week1_xp_p25', (select percentile_cont(0.25) within group (order by xp) from week1),
+  'week1_xp_p50', (select percentile_cont(0.5) within group (order by xp) from week1),
+  'week1_xp_p75', (select percentile_cont(0.75) within group (order by xp) from week1),
+  'players_month1', (select count(*) from month1),
+  'month1_xp_p50', (select percentile_cont(0.5) within group (order by xp) from month1),
+  'active_days_p50', (select percentile_cont(0.5) within group (order by active_days) from month1),
+  'plans', (select count(*) from plans),
+  'plan_size_avg', (select round(avg(size), 2) from plans),
+  'done_rate_pct', (select round(100.0 * sum(done) / nullif(sum(size), 0), 1) from plans),
+  'removed_per_plan_avg', (select round(avg(removed), 2) from plans)
+) as beta;
