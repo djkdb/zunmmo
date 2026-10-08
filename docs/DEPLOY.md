@@ -60,7 +60,7 @@
 
 **공개 면**
 - [ ] 도메인 연결, `NEXT_PUBLIC_SITE_URL` 갱신, Auth Site URL/Redirect URLs 갱신
-- [ ] OG 이미지(`/opengraph-image`)와 링크 미리보기 확인 (카카오톡·슬랙)
+- [ ] OG 이미지(`/opengraph-image.png`, `pnpm art:build`가 만든 정적 파일)와 링크 미리보기 확인 (카카오톡·슬랙)
 - [ ] PWA 설치 확인: Android Chrome "앱 설치", iOS Safari "홈 화면에 추가" — 아이콘·`/adventure` 시작
 - [ ] 법적 고지: 문의처 설정, 저장 지역 기입, **공개 전 법률 검토** (현재 문서는 베타 초안)
 - [ ] Lighthouse (모바일): Performance ≥ 90, Accessibility 100 목표 (ARCHITECTURE §9)
@@ -68,5 +68,63 @@
 ## 5. 베타 운영 (Phase 9)
 
 - 10–30명 초대, 피드백 채널 하나(오픈채팅/폼)를 정해 설정 화면 문구와 릴리스 노트에 적는다.
-- 매주 지표 쿼리 → 밸런스 조정 후보: 레벨 곡선(`LEVEL_CURVE`), 추천 가중치(`RECOMMEND_WEIGHTS`), GM 문장 풀(`briefing.ts`). 바꾸면 GAME_SYSTEM/GAME_MASTER 문서도 같은 PR에서.
+- 매주 지표 쿼리 → **7번 결과(JSON 한 줄)를 `beta.json`으로 저장해 `pnpm sim --compare beta.json`** — 각 지표가 4주 시뮬레이션 범위 안인지, 밖이면 어느 규칙부터 볼지 알려 준다 (플레이어 10명 미만이면 경고).
+- 밸런스 조정 후보: 레벨 곡선(`LEVEL_CURVE`), 추천 가중치(`RECOMMEND_WEIGHTS`), GM 문장 풀(`briefing.ts`). 바꾸면 GAME_SYSTEM/GAME_MASTER 문서도 같은 PR에서.
 - 롤백: Vercel "Promote previous deployment". 마이그레이션은 되돌리지 않고 **새 마이그레이션으로 정정**한다.
+
+## 6. Cloudflare Workers (대안 호스팅)
+
+Vercel이 기본이고, Cloudflare에서는 **OpenNext 어댑터(`@opennextjs/cloudflare`)로 Workers에** 올린다. 옛 `@cloudflare/next-on-pages`(Pages)는 지원이 끝났다. 설정은 저장소에 들어 있다: `wrangler.jsonc`, `open-next.config.ts`, `patches/`, `pnpm cf:*` 스크립트.
+검증(2026-10-08, Next 16.4.0 · @opennextjs/cloudflare 1.20.9 · wrangler 4.148): 로컬 Workers 런타임에서 E2E 23개(데스크톱 전체와 모바일 페르소나) 통과, CI에 Workers 빌드 잡이 있다.
+
+### 6.1 처음 한 번
+
+1. Cloudflare 계정. **플랜**: 워커 크기가 gzip 약 3.0MiB라 Free 한도(3MiB)에 겨우 들어간다. 운영은 **Workers Paid(월 $5, 10MiB)**를 권장한다. CI의 "Worker size" 단계가 매번 크기를 출력하고, 3MiB를 넘으면 경고, 10MiB를 넘으면 실패한다.
+2. Supabase는 그대로 쓴다 (§1). 워커 이름은 `wrangler.jsonc`의 `"name": "life-rpg"`. 바꾸면 `services[].service`도 같이 바꾼다.
+
+### 6.2 방법 A — Git 연결 (Workers Builds, 권장)
+
+Dashboard → **Workers & Pages → Create → Import a repository** → 이 저장소.
+
+| 항목 | 값 |
+|------|----|
+| Build command | `pnpm exec opennextjs-cloudflare build` |
+| Deploy command | `pnpm exec opennextjs-cloudflare deploy` |
+| Production branch | `main` (그 외 브랜치는 미리보기 URL — Builds 설정에서 켠다) |
+
+- **빌드 변수** (Settings → Build → *Variables and secrets*): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_CONTACT_EMAIL`, `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED`. `NEXT_PUBLIC_*`는 **빌드할 때 코드에 박히므로** 런타임 변수로 넣으면 소용없다. 바꾸면 다시 빌드한다. `NODE_VERSION=22`도 넣는다.
+- **런타임 변수** (Settings → *Variables and Secrets*): `ERROR_WEBHOOK_URL`(Secret, 선택), 프리뷰에서만 `ENABLE_STYLEGUIDE=1`.
+- **`SUPABASE_SERVICE_ROLE_KEY`는 넣지 않는다** — Vercel과 같은 원칙이다.
+
+### 6.3 방법 B — 내 컴퓨터나 CI에서 직접
+
+```bash
+# 프로덕션 공개 값(NEXT_PUBLIC_*)을 .env.production.local에 — 빌드에 들어간다 (커밋 금지)
+pnpm exec wrangler login               # CI에서는 CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
+pnpm cf:deploy                         # = opennextjs-cloudflare build && deploy
+pnpm exec wrangler secret put ERROR_WEBHOOK_URL   # 선택
+```
+
+### 6.4 도메인 · Auth
+
+1. Worker → Settings → **Domains & Routes → Add → Custom domain** (도메인 DNS가 Cloudflare에 있어야 한다). 임시로는 `life-rpg.<계정>.workers.dev`를 쓴다.
+2. `NEXT_PUBLIC_SITE_URL`을 그 주소로 바꾸고 **다시 빌드·배포**한다.
+3. Supabase Auth의 **Site URL / Redirect URLs**에 그 주소(`https://<도메인>/**`)를 추가한다 (§1.3). 빠뜨리면 로그인 메일 링크가 엉뚱한 곳으로 간다.
+
+### 6.5 배포 전에 로컬에서 확인
+
+```bash
+pnpm cf:preview                              # 실제 Workers 런타임(workerd)으로 http://localhost:8787
+pnpm cf:build && E2E_CF=1 pnpm test:e2e      # E2E 전체를 Workers 런타임에서 (로컬 DB 필요)
+```
+어댑터나 Next를 올릴 때는 반드시 이 두 가지를 돌린다.
+
+### 6.6 알아 둘 점
+
+- **proxy.ts(Node 미들웨어)**: OpenNext에서는 아직 "experimental"이다 (빌드 경고). 지금은 로그인 리다이렉트와 세션 갱신이 E2E로 확인됐다.
+- **`patches/@opennextjs__cloudflare@1.20.9.patch`**: 어댑터가 Next 16.4의 `preview-props.json`을 아직 번들에 넣지 않아 모든 페이지가 500이 나던 문제를 고치는 한 줄 패치다. 어댑터가 고치면 `pnpm patch-remove @opennextjs/cloudflare@1.20.9`로 지운다.
+- **캐시**: `open-next.config.ts`는 static assets 캐시를 쓴다. 빌드 결과만 내보내므로 R2 버킷이 필요 없다. 시간 기반 재검증(`revalidate`, `cacheLife`)을 쓰기 시작하면 R2 캐시로 바꿔야 한다 (https://opennext.js.org/cloudflare/caching).
+- **런타임 파일 읽기 불가**: Workers에는 프로젝트 파일이 없다. 그래서 OG 이미지를 `pnpm art:build`에서 미리 렌더한다. 서버 코드에서 `fs`로 저장소 파일을 읽지 않는다.
+- **관측**: `wrangler.jsonc`에서 Workers Logs를 켜 두었다 (`observability`). 실시간으로 보려면 `pnpm exec wrangler tail`. 서버 오류 JSON과 `ERROR_WEBHOOK_URL`은 Vercel과 같다.
+- **남용 방지**: Vercel Firewall 대신 Cloudflare **WAF → Rate limiting rules**를 쓴다. 예: `/login`, `/auth/*`에 IP당 분당 제한.
+- **롤백**: Dashboard → Deployments → 이전 버전 *Rollback*, 또는 `pnpm exec wrangler rollback`. 마이그레이션은 Vercel 때처럼 되돌리지 않고 새 마이그레이션으로 정정한다.

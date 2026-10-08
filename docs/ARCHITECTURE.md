@@ -20,7 +20,7 @@
 | Testing | **Vitest** (unit) + **Playwright** (e2e smoke) | `lib/game` 순수 함수 100% 커버리지, 핵심 플로우 e2e |
 | Lint/Format | ESLint (next config) + Prettier (+ tailwind plugin) | |
 | Package manager | **pnpm** | |
-| Deployment | **Vercel** (Preview per PR, Production on `main`) + Supabase Cloud | |
+| Deployment | **Vercel** (Preview per PR, Production on `main`) + Supabase Cloud | 대안: Cloudflare Workers via OpenNext (`wrangler.jsonc`, DEPLOY §6) |
 | Monitoring (Beta) | Vercel Analytics + Sentry(선택) | |
 
 **추가 라이브러리 정책**: 위 목록 외의 의존성은 "왜 직접 구현이 더 나쁜가"를 PR 설명에 적은 뒤 추가한다. 애니메이션 라이브러리(framer-motion 등)는 Phase 8에서 CSS `steps()` + Web Animations API로 부족함이 확인될 때만 도입.
@@ -215,6 +215,7 @@ schedules (                              -- 고정 시간 일정 (로컬 날짜+
   title text not null, starts_at timestamptz not null, ends_at timestamptz (> starts_at),
   all_day boolean not null default false, location text,
   repeat_weekdays smallint[] (ISO 1–7, null = 한 번), repeat_until date, skip_dates date[], -- 주간 반복 + 회차 건너뛰기
+  series_id uuid references schedules on delete cascade, occurrence_date date,              -- 회차만 바꾼 일정 (edit_occurrence / restore_occurrence RPC만 씀)
   quest_id uuid references quests on delete set null,   -- 본인 퀘스트만 (RLS)
   source text not null default 'manual',  -- (later) 'google'
   created_at
@@ -223,6 +224,7 @@ schedules (                              -- 고정 시간 일정 (로컬 날짜+
 adventures (                             -- Today's Adventure (하루 1행)
   id uuid pk, user_id uuid not null, game_date date not null,
   quest_ids uuid[] not null (1–12개: 단발 6 + 습관, 모두 본인 퀘스트 — owns_all_quests()),
+  removed_quest_ids uuid[] not null default '{}',  -- 계획에서 뺀 퀘스트 (GM이 쉬게 함, SNOOZE_DAYS)
   briefing text, source text not null,   -- 'auto' | 'custom'
   started_at timestamptz not null default now(),
   unique (user_id, game_date)
@@ -287,7 +289,8 @@ user_achievements (
 | 시각 회귀 | Playwright `toHaveScreenshot` (`e2e/visual.spec.ts`, `VISUAL=1`) | `/styleguide` art·pixel·game 섹션, reduced-motion으로 스프라이트 첫 프레임 고정. 스냅샷은 `e2e/visual.spec.ts-snapshots/`에 커밋 |
 | 시각 | Playwright 스크린샷 (Phase 8) | 픽셀 컴포넌트 회귀 |
 
-CI(GitHub Actions): `typecheck` → `lint` → `test` → `build`. Vercel Preview 배포.
+CI(GitHub Actions): `typecheck` → `lint` → `test` → `build`, DB 테스트·E2E(`next start`), Cloudflare Workers 빌드와 크기 확인. Vercel Preview 배포.
+서버 코드는 런타임에 저장소 파일을 읽지 않는다 (Workers에는 파일이 없다) — 정적 산출물(OG 이미지 등)은 `pnpm art:build`가 만든다.
 
 ## 8. 환경 변수
 

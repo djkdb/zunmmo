@@ -39,6 +39,7 @@ recommendToday({ quests, completionsLast7Days, schedulesToday, capacityMinutes, 
 - 보스 D-0/D-1은 용량을 넘어도 항상 포함.
 - 결과는 `adventures(game_date)`에 저장되고 하루 동안 고정된다 (다시 시작하면 재계산).
 - **추천은 제안이다**: 시작 후 패널에서 각 퀘스트를 빼거나(×), "퀘스트 더 담기"에서 GM의 다음 후보 5개 중 골라 담는다.
+- **GM은 뺀 것을 기억한다**: 뺀 퀘스트는 습관이면 그날, 단발이면 이틀 더 쉬었다가 다시 추천한다 (GAME_SYSTEM §8, `SNOOZE_DAYS`).
 - 페이스·보스 준비·틈새 시간·tooBig 규칙은 GAME_SYSTEM §8. 페이스와 브리핑은 `planToday()` 한 곳에서 같은 입력으로 계산한다.
 - 패널은 계획의 근거를 함께 보여 준다: "오늘 일정 N개(시간)를 빼고 남은 시간에 맞췄어요", 가벼운 날 안내, 너무 긴 퀘스트 안내.
 

@@ -148,6 +148,13 @@
 - [x] 4주 페르소나 시뮬레이션(`scripts/sim`, `pnpm sim`) + 불변식 테스트
 - [x] 시뮬레이션 발견 반영: 램프 레벨 곡선, 습관은 6개 상한 밖(계획 최대 12), 심야 = 하루 시작 전 4시간 + 새벽형 팁
 
+## Beta Hardening 3 — 다음 후보 + Cloudflare ✅
+- [x] 반복 일정 회차만 바꾸기 / 원래대로 (`edit_occurrence`, `restore_occurrence`)
+- [x] 적극 플레이 시뮬레이션: 나누기·다시 도전·빼기·더 담기 정책, 수동과 비교
+- [x] 시뮬레이션 발견 반영: 뺀 퀘스트 쉬기(`SNOOZE_DAYS`), 습관 옆에 안 들어가는 마감 퀘스트도 나누기 안내
+- [x] 베타 지표 ↔ 시뮬레이션 비교 (`beta-metrics.sql` 7번 → `pnpm sim --compare`)
+- [x] Cloudflare Workers 배포 (OpenNext) — 로컬 Workers 런타임에서 E2E 전부 통과, OG 이미지는 빌드 때 렌더
+
 ---
 
 ## Post-Launch 후보
