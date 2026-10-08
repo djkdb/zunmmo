@@ -22,6 +22,7 @@ import {
   QUESTLINE_NEXT_STEP_DIFFICULTY,
   newlyUnlocked,
   questXp,
+  retryDeadline,
   templateById,
   templateStat,
 } from "@/lib/game";
@@ -306,4 +307,47 @@ export async function createQuestsFromTemplates(
     if (error) return fail(codeFromDbError(error));
   }
   redirect("/adventure");
+}
+
+// ───────── expired quests: retry or put away (never a penalty — GAME_SYSTEM §1.4) ─────────
+
+/** "다시 도전": an expired quest gets a fresh deadline a week from today. */
+export async function retryQuest(questId: string): Promise<Result<{ deadline: string }>> {
+  const player = await requireCharacter();
+  const today = playerToday(player);
+  const supabase = await createClient();
+  const { data: quest, error } = await supabase
+    .from("quests")
+    .select("type, status, deadline")
+    .eq("id", questId)
+    .maybeSingle();
+  if (error) return fail(codeFromDbError(error));
+  if (!quest) return fail("QUEST_NOT_FOUND");
+  if (
+    quest.type === "daily" ||
+    quest.status !== "active" ||
+    !quest.deadline ||
+    quest.deadline >= today
+  ) {
+    return fail("QUEST_NOT_ACTIVE");
+  }
+  const deadline = retryDeadline(today);
+  const { error: updateError } = await supabase
+    .from("quests")
+    .update({ deadline })
+    .eq("id", questId);
+  if (updateError) return fail(codeFromDbError(updateError));
+  return ok({ deadline });
+}
+
+/** Put a quest away from a list without leaving the page (restore from the archive). */
+export async function stashQuest(questId: string): Promise<Result<null>> {
+  await requireCharacter();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_quest_archived", {
+    p_quest_id: questId,
+    p_archived: true,
+  });
+  if (error) return fail(codeFromDbError(error));
+  return ok(null);
 }

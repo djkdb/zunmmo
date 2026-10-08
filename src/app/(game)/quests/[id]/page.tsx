@@ -8,6 +8,7 @@ import { PixelIcon } from "@/components/pixel/PixelIcon";
 import { Button } from "@/components/ui/Button";
 import { setQuestArchived, updateQuest } from "@/features/quests/actions";
 import { listCompletionsSince } from "@/features/progress/queries";
+import { ExpiredQuestActions } from "@/features/quests/components/ExpiredQuestActions";
 import { QuestAction } from "@/features/quests/components/QuestAction";
 import { QuestForm } from "@/features/quests/components/QuestForm";
 import { getQuest, listQuestlineOptions } from "@/features/quests/queries";
@@ -50,6 +51,15 @@ async function QuestDetail({
         today={today}
         action={<QuestAction quest={quest} doneToday={doneToday} />}
       />
+
+      {quest.status === "expired" && (
+        <div className="flex flex-col gap-2 rounded-sm border border-border p-4">
+          <p className="text-small text-text-secondary">
+            기한이 지났어요. XP는 그대로예요 — 일주일 더 도전하거나 보관해 둘 수 있어요.
+          </p>
+          <ExpiredQuestActions questId={quest.id} questTitle={quest.title} />
+        </div>
+      )}
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-small">
         <dt className="text-text-muted">성장 스탯</dt>
