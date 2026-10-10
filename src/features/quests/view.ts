@@ -16,5 +16,6 @@ export function toCardData(
     estimatedMinutes: quest.estimatedMinutes ?? undefined,
     completed: quest.status === "completed" || options.completedToday === true,
     expired: quest.status === "expired",
+    stat: quest.primaryStat,
   };
 }

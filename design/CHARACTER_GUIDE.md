@@ -211,3 +211,22 @@ play('level-up');              // 우선순위 높은 상태는 현재 일회성
 | 오늘의 모험 추천 계산 | `thinking` (최소 600ms) | "오늘의 모험을 고르는 중…" |
 | 오늘 모험 시작 | `walking` 1루프 → idle | 모험 패널 펼침 |
 | 심야 + 무활동 | `sleeping` | 대시보드 문구 "푹 쉬는 것도 모험의 일부야" |
+
+## 11. 몬스터 (퀘스트의 적)
+
+퀘스트마다 "쓰러뜨릴 적"이 있다 — 할 일 목록이 아니라 전투처럼 보이게 하는 장치. 원본은 `art/monsters.ts`, `pnpm art:build`가 시트를 만든다.
+
+| 적 | 스탯 / 타입 | 크기 | 색 |
+|----|------------|------|----|
+| 슬라임 `slime` | VIT 활력 | 24×24 | emerald |
+| 마도서 미믹 `tome` | INT 학습 | 24×24 | violet + gold |
+| 감시자의 눈 `watcher` | FOC 집중 | 24×24 | ink-100 + royal |
+| 수다 유령 `ghost` | SOC 관계 | 24×24 | ink-100 ramp |
+| 불꽃 도깨비 `wisp` | CRE 창작 | 24×24 | gold → ember → crimson |
+| 마감 드래곤 `dragon` | 모든 BOSS | 32×32 | crimson + parchment 뿔 |
+
+- 원본은 대기 1프레임만 그린다. 빌드가 **bob 프레임**(1ap 아래로)과 **처치 프레임**(밝기별 ink 램프, 외곽선 유지)을 만들어 `[idle, bob, defeated]` 3프레임 가로 시트로 낸다 — 원본의 맨 아래 줄은 비워 둔다.
+- 대기는 900ms 2스텝(CSS `steps`, `prefers-reduced-motion`이면 정지), 완료된 퀘스트는 처치 프레임 + "처치!".
+- 매핑은 `components/game/monster/monster.ts`의 `monsterFor(type, stat)` (게임 규칙이 아닌 표현 매핑). 레벨 표기 `Lv.N` = 난이도.
+- 몬스터는 장식이다(`aria-hidden`) — 의미는 제목·태그·XP가 전달한다.
+

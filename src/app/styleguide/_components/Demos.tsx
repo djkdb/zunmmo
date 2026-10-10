@@ -47,13 +47,18 @@ const DEMO_QUESTS: QuestCardData[] = [
   demoQuest("컴퓨터네트워크 과제 제출", "boss", 4, {
     deadline: "2026-10-09",
     estimatedMinutes: 180,
+    stat: "int",
   }),
-  demoQuest("로그인 기능 만들기", "main", 3, { estimatedMinutes: 120 }),
-  demoQuest("AI 강의 3강 복습하기", "daily", 3, { estimatedMinutes: 60 }),
-  demoQuest("토요일 축구하기", "side", 2, { deadline: "2026-10-10" }),
+  demoQuest("로그인 기능 만들기", "main", 3, { estimatedMinutes: 120, stat: "foc" }),
+  demoQuest("AI 강의 3강 복습하기", "daily", 3, { estimatedMinutes: 60, stat: "int" }),
+  demoQuest("토요일 축구하기", "side", 2, { deadline: "2026-10-10", stat: "vit" }),
+  demoQuest("블로그 글 쓰기", "side", 2, { stat: "cre", completed: true }),
 ];
 
-const DAILY_ROWS = [demoQuest("운동 30분", "daily", 2), demoQuest("영단어 30개", "daily", 1)];
+const DAILY_ROWS = [
+  demoQuest("운동 30분", "daily", 2, { stat: "vit" }),
+  demoQuest("친구에게 안부 연락", "daily", 1, { stat: "soc" }),
+];
 
 /** Character header + XP gain loop: the core "+XP, the character grew" feedback in miniature. */
 export function CharacterDemo() {
@@ -195,6 +200,7 @@ export function QuestDemo() {
               title={quest.title}
               difficulty={quest.difficulty}
               xp={quest.xp}
+              stat={quest.stat}
               completed={done[quest.title]}
               action={
                 <CompleteButton

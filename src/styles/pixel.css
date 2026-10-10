@@ -343,6 +343,10 @@
     }
   }
 
+  /* Quest enemy idle: swaps to the sheet's bob frame and back (MonsterSprite). */
+  .monster-idle {
+    animation: monster-idle 900ms steps(1, end) infinite;
+  }
   /* 1ap vertical bob in two steps (quest marker). */
   .pixel-bob {
     animation: pixel-bob 1200ms steps(1, end) infinite;
@@ -416,6 +420,12 @@
   }
 }
 
+@keyframes monster-idle {
+  50% {
+    background-position: calc(var(--monster-w) * -1) 0;
+  }
+}
+
 @keyframes pixel-bob {
   50% {
     transform: translateY(calc(-1px * var(--pixel-scale, 4)));
@@ -485,6 +495,7 @@
   .pixel-spinner > [aria-hidden],
   .pixel-skeleton,
   .pixel-bob,
+  .monster-idle,
   .pixel-twinkle,
   .pixel-flicker,
   .pixel-pop {

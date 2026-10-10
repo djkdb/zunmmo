@@ -123,8 +123,8 @@ test.describe("mobile personas", () => {
     );
     // The exam is prepared for, not "done" three days early.
     await expect(panel).not.toContainText("자료구조 중간고사");
-    // Boss HP: readiness from the questline's prep steps.
-    await expect(visible(page).getByRole("progressbar", { name: "보스 준비도" })).toBeVisible();
+    // Boss HP: every prep step done takes some off.
+    await expect(visible(page).getByRole("progressbar", { name: "보스 HP" })).toBeVisible();
 
     const started = Date.now();
     await panel.getByRole("button", { name: "START TODAY'S ADVENTURE" }).click();

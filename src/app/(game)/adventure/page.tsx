@@ -156,6 +156,7 @@ async function Adventure() {
                     difficulty={quest.difficulty}
                     xp={quest.xp}
                     completed={doneToday}
+                    stat={quest.primaryStat}
                     href={questHref(quest.id)}
                     action={<QuestAction quest={quest} doneToday={doneToday} />}
                   />

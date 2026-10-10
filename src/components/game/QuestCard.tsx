@@ -5,11 +5,13 @@ import { PixelFrame } from "@/components/pixel/PixelFrame";
 import { PixelIcon } from "@/components/pixel/PixelIcon";
 import { PixelStars } from "@/components/pixel/PixelStars";
 import { PixelTag } from "@/components/pixel/PixelTag";
-import type { Difficulty, GameDate, QuestType } from "@/lib/game";
+import type { Difficulty, GameDate, QuestType, Stat } from "@/lib/game";
 import { cn } from "@/lib/utils/cn";
 import { formatMinutes, formatXpGain } from "@/lib/utils/format";
 
 import { type DeadlineTone, deadlineStatus } from "./deadline";
+import { MonsterSprite } from "./monster/MonsterSprite";
+import { monsterFor } from "./monster/monster";
 import { QUEST_TYPE_META } from "./quest-meta";
 import { QuestTypeTag } from "./QuestTypeTag";
 
@@ -24,6 +26,8 @@ export interface QuestCardData {
   completed?: boolean;
   /** Deadline passed without completion — shown neutrally, never as a failure. */
   expired?: boolean;
+  /** Primary stat: picks the enemy sprite. Without it the card shows the type icon. */
+  stat?: Stat;
 }
 
 const DEADLINE_TONE_CLASSES: Record<DeadlineTone, string> = {
@@ -43,14 +47,17 @@ interface QuestCardProps {
   className?: string;
 }
 
-/** Default quest card: type stripe, icon, title, meta row, XP reward and action (UI_GUIDE §5.3). */
+/**
+ * Default quest card (UI_GUIDE §5.3): type stripe, the quest's enemy, title, meta row, XP reward
+ * and action. The enemy idles until the quest is done, then lies defeated.
+ */
 export function QuestCard({ quest, today, action, href, className }: QuestCardProps) {
   const meta = QUEST_TYPE_META[quest.type];
   const deadline = quest.deadline ? deadlineStatus(quest.deadline, today) : null;
 
   return (
     <PixelFrame as="article" stripe={quest.type} className={cn("flex gap-3 py-3 pr-3", className)}>
-      <PixelIcon name={meta.icon} className="mt-0.5" />
+      {quest.stat ? <EnemySlot quest={quest} /> : <PixelIcon name={meta.icon} className="mt-0.5" />}
       <div className={cn("flex min-w-0 flex-1 flex-col gap-1.5", quest.completed && "opacity-60")}>
         <h3 className="line-clamp-2 text-title">
           {href ? (
@@ -82,5 +89,24 @@ export function QuestCard({ quest, today, action, href, className }: QuestCardPr
         {action}
       </div>
     </PixelFrame>
+  );
+}
+
+function EnemySlot({ quest }: { quest: QuestCardData }) {
+  const monster = monsterFor(quest.type, quest.stat!);
+  const boss = quest.type === "boss";
+  return (
+    <div className="flex w-20 shrink-0 flex-col items-center self-center text-center">
+      <MonsterSprite
+        name={monster.name}
+        state={quest.completed ? "defeated" : "idle"}
+        scale={2}
+        className={boss ? undefined : "my-1"}
+      />
+      <span className="font-pixel text-pixel text-text-secondary">{monster.label}</span>
+      <span className="font-pixel text-pixel text-text-muted">
+        {quest.completed ? "처치!" : `Lv.${quest.difficulty}`}
+      </span>
+    </div>
   );
 }

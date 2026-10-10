@@ -2,12 +2,13 @@ import Link from "next/link";
 
 import { PixelBar } from "@/components/pixel/PixelBar";
 import { PixelFrame } from "@/components/pixel/PixelFrame";
-import { PixelIcon } from "@/components/pixel/PixelIcon";
 import { PixelTag } from "@/components/pixel/PixelTag";
 import type { GameDate } from "@/lib/game";
 import { formatXpGain } from "@/lib/utils/format";
 
 import { deadlineStatus } from "./deadline";
+import { MonsterSprite } from "./monster/MonsterSprite";
+import { BOSS_MONSTER } from "./monster/monster";
 
 interface BossBannerProps {
   title: string;
@@ -19,7 +20,10 @@ interface BossBannerProps {
   readiness?: number | null;
 }
 
-/** The nearest boss as a wanted poster (UI_GUIDE §5.2): parchment, crimson D-day stamp. */
+/**
+ * The nearest boss as a wanted poster (UI_GUIDE §5.2): the dragon, parchment, crimson D-day
+ * stamp. A questline boss shows HP — every prep step done takes some off.
+ */
 export function BossBanner({ title, deadline, today, xp, href, readiness }: BossBannerProps) {
   const status = deadlineStatus(deadline, today);
   return (
@@ -29,7 +33,7 @@ export function BossBanner({ title, deadline, today, xp, href, readiness }: Boss
       aria-label="다가오는 보스"
       className="flex items-center gap-4 p-4"
     >
-      <PixelIcon name="quest-boss" scale={3} />
+      <MonsterSprite name={BOSS_MONSTER.name} scale={3} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <PixelTag tone="boss" className="self-start">
           BOSS
@@ -43,21 +47,21 @@ export function BossBanner({ title, deadline, today, xp, href, readiness }: Boss
           </Link>
         </h2>
         <span className="font-pixel text-pixel text-on-parchment-muted">
-          처치 보상 {formatXpGain(xp)}
+          {BOSS_MONSTER.label} · 처치 보상 {formatXpGain(xp)}
         </span>
         {readiness != null && (
           <span className="relative z-10 flex items-center gap-2">
-            <span className="shrink-0 font-pixel text-pixel text-on-parchment-muted">준비도</span>
+            <span className="shrink-0 font-pixel text-pixel text-on-parchment-muted">HP</span>
             <PixelBar
-              ratio={readiness}
+              ratio={1 - readiness}
               tone="boss"
               units={4}
-              label="보스 준비도"
-              valueText={`${Math.round(readiness * 100)}%`}
+              label="보스 HP"
+              valueText={`${Math.round((1 - readiness) * 100)}% — 준비 ${Math.round(readiness * 100)}%`}
               className="flex-1"
             />
             <span className="shrink-0 font-pixel text-pixel text-on-parchment" aria-hidden>
-              {Math.round(readiness * 100)}%
+              {Math.round((1 - readiness) * 100)}%
             </span>
           </span>
         )}

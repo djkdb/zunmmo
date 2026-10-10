@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import { AchievementBadge } from "@/components/game/AchievementBadge";
 import { BossBanner } from "@/components/game/BossBanner";
+import { MonsterSprite } from "@/components/game/monster/MonsterSprite";
+import { BOSS_MONSTER, MONSTER_BY_STAT } from "@/components/game/monster/monster";
 import { QuestTypeTag } from "@/components/game/QuestTypeTag";
 import { StatBar } from "@/components/game/StatBar";
 import { ICON_ATLAS } from "@/components/pixel/icons.generated";
@@ -203,7 +205,22 @@ export default function StyleguidePage() {
               ))}
             </div>
           </Specimen>
-          <Specimen label="BossBanner — 현상수배서, 퀘스트라인 보스는 준비도(보스 HP) 바">
+          <Specimen label="Monsters 24×24 · boss 32×32 @2× — 스탯별 적, 대기(2프레임) / 처치(잉크 램프)">
+            <div className="flex flex-wrap items-end gap-6">
+              {[...STATS.map((stat) => MONSTER_BY_STAT[stat]), BOSS_MONSTER].map((m) => (
+                <figure key={m.name} className="flex flex-col items-center gap-2">
+                  <span className="flex items-end gap-2">
+                    <MonsterSprite name={m.name} />
+                    <MonsterSprite name={m.name} state="defeated" />
+                  </span>
+                  <figcaption className="font-pixel text-pixel text-text-muted">
+                    {m.label}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </Specimen>
+          <Specimen label="BossBanner — 현상수배서 + 드래곤, 퀘스트라인 보스는 HP 바 (준비할수록 감소)">
             <div className="flex w-full max-w-xl flex-col gap-6">
               <BossBanner
                 title="자료구조 중간고사"

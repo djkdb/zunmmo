@@ -2,9 +2,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { PixelStars } from "@/components/pixel/PixelStars";
-import type { Difficulty } from "@/lib/game";
+import type { Difficulty, Stat } from "@/lib/game";
 import { cn } from "@/lib/utils/cn";
 import { formatXpGain } from "@/lib/utils/format";
+
+import { MonsterSprite } from "./monster/MonsterSprite";
+import { MONSTER_BY_STAT } from "./monster/monster";
 
 interface QuestRowProps {
   title: string;
@@ -13,12 +16,21 @@ interface QuestRowProps {
   completed?: boolean;
   action?: ReactNode;
   href?: string;
+  /** Primary stat: shows the habit's enemy at the start of the row. */
+  stat?: Stat;
 }
 
 /** Compact 56px row for DAILY lists — no frame, divider only (UI_GUIDE §5.2). */
-export function QuestRow({ title, difficulty, xp, completed, action, href }: QuestRowProps) {
+export function QuestRow({ title, difficulty, xp, completed, action, href, stat }: QuestRowProps) {
   return (
     <li className="relative flex min-h-14 items-center gap-3 border-b border-border py-1.5 last:border-b-0">
+      {stat && (
+        <MonsterSprite
+          name={MONSTER_BY_STAT[stat].name}
+          state={completed ? "defeated" : "idle"}
+          scale={2}
+        />
+      )}
       <div className={cn("flex min-w-0 flex-1 flex-col gap-0.5", completed && "opacity-60")}>
         {href ? (
           <Link
