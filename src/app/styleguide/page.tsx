@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AchievementBadge } from "@/components/game/AchievementBadge";
+import { BattleScene } from "@/components/game/BattleScene";
 import { BossBanner } from "@/components/game/BossBanner";
 import { MonsterSprite } from "@/components/game/monster/MonsterSprite";
 import { BOSS_MONSTER, MONSTER_BY_STAT } from "@/components/game/monster/monster";
@@ -218,6 +219,26 @@ export default function StyleguidePage() {
                   </figcaption>
                 </figure>
               ))}
+            </div>
+          </Specimen>
+          <Specimen label="BattleScene — 퀘스트 상세의 전투: 캐릭터 vs 적, HP, 전투 메시지 (완료하면 처치 연출)">
+            <div className="grid w-full gap-6 lg:grid-cols-2">
+              <BattleScene
+                hero={{ name: "모험가", outfit: "royal", level: 3 }}
+                monster={MONSTER_BY_STAT.int}
+                level={3}
+                xp={70}
+                defeated={false}
+                hp={1}
+              />
+              <BattleScene
+                hero={{ name: "모험가", outfit: "ember", level: 3 }}
+                monster={BOSS_MONSTER}
+                level={5}
+                xp={500}
+                defeated={false}
+                hp={0.6}
+              />
             </div>
           </Specimen>
           <Specimen label="BossBanner — 현상수배서 + 드래곤, 퀘스트라인 보스는 HP 바 (준비할수록 감소)">

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { BattleScene } from "@/components/game/BattleScene";
 import { QuestCard } from "@/components/game/QuestCard";
+import { monsterFor } from "@/components/game/monster/monster";
 import { STAT_META } from "@/components/game/quest-meta";
 import { PixelIcon } from "@/components/pixel/PixelIcon";
 import { Button } from "@/components/ui/Button";
@@ -12,11 +14,17 @@ import { listCompletionsSince } from "@/features/progress/queries";
 import { ExpiredQuestActions } from "@/features/quests/components/ExpiredQuestActions";
 import { QuestAction } from "@/features/quests/components/QuestAction";
 import { QuestForm } from "@/features/quests/components/QuestForm";
-import { getQuest, listQuestlineOptions } from "@/features/quests/queries";
+import { getQuest, listQuestlineOptions, listQuestlines } from "@/features/quests/queries";
 import type { CreatableType } from "@/features/quests/schemas";
 import { toCardData } from "@/features/quests/view";
 import { playerToday, requireCharacter } from "@/features/player/queries";
-import { type SplittableType, describeRepeat, isSplittable } from "@/lib/game";
+import {
+  type SplittableType,
+  bossReadiness,
+  describeRepeat,
+  isSplittable,
+  levelFromXp,
+} from "@/lib/game";
 import { formatMinutes } from "@/lib/utils/format";
 
 export const metadata: Metadata = { title: "퀘스트" };
@@ -37,6 +45,13 @@ async function QuestDetail({
     listCompletionsSince(today),
   ]);
   const doneToday = completions.some((c) => c.questId === quest.id);
+  // A questline boss loses HP as its prep steps are done (same as the dashboard banner).
+  const readiness =
+    quest.type === "boss" && quest.goal
+      ? bossReadiness(
+          (await listQuestlines(today)).find((l) => l.id === quest.goal!.id)?.steps ?? [],
+        )
+      : null;
   const archived = quest.status === "archived";
   const editable = quest.type !== "hidden";
   const splittable =
@@ -56,6 +71,19 @@ async function QuestDetail({
           저장했어요.
         </p>
       )}
+      <BattleScene
+        hero={{
+          name: player.character.name,
+          outfit: player.character.outfit,
+          level: levelFromXp(player.character.totalXp),
+        }}
+        monster={monsterFor(quest.type, quest.primaryStat)}
+        level={quest.difficulty}
+        xp={quest.xp}
+        defeated={quest.status === "completed" || doneToday}
+        waiting={quest.status === "expired"}
+        hp={readiness === null ? 1 : 1 - readiness}
+      />
       <QuestCard
         quest={toCardData(quest, { completedToday: doneToday })}
         today={today}

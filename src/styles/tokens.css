@@ -135,6 +135,11 @@
   --color-boss-stamp: var(--color-crimson-700);
   --color-parchment-divider: var(--color-parchment-500);
 
+  /* Battle scene (quest detail): always a night field, in both themes — like the hero scene. */
+  --color-battle-sky: var(--color-ink-950);
+  --color-on-battle: var(--color-ink-100);
+  --color-on-battle-muted: var(--color-ink-300);
+
   /* Calendar: today's cell gets a 2-unit gold pixel border (UI_GUIDE §7) */
   --color-today: var(--color-gold-400);
   --color-schedule-marker: var(--color-ink-300);

@@ -225,8 +225,9 @@ play('level-up');              // 우선순위 높은 상태는 현재 일회성
 | 불꽃 도깨비 `wisp` | CRE 창작 | 24×24 | gold → ember → crimson |
 | 마감 드래곤 `dragon` | 모든 BOSS | 32×32 | crimson + parchment 뿔 |
 
-- 원본은 대기 1프레임만 그린다. 빌드가 **bob 프레임**(1ap 아래로)과 **처치 프레임**(밝기별 ink 램프, 외곽선 유지)을 만들어 `[idle, bob, defeated]` 3프레임 가로 시트로 낸다 — 원본의 맨 아래 줄은 비워 둔다.
-- 대기는 900ms 2스텝(CSS `steps`, `prefers-reduced-motion`이면 정지), 완료된 퀘스트는 처치 프레임 + "처치!".
+- 원본은 대기 1프레임만 그린다. 빌드가 **bob 프레임**(1ap 아래로), **처치 프레임**(밝기별 ink 램프, 외곽선 유지), **피격 프레임**(실루엣을 ink-100으로, 외곽선 유지)을 만들어 `[idle, bob, defeated, hit]` 4프레임 가로 시트로 낸다 — 원본의 맨 아래 줄은 비워 둔다.
+- 대기는 900ms 2스텝(CSS `steps`, `prefers-reduced-motion`이면 정지). 화면에서 완료되면 **처치 연출**(`BattleMonster`): 피격 ↔ 대기 섬광 + 1ap 좌우 흔들림 후 처치 프레임으로 1ap 가라앉는다(760ms, 움직임 줄이기면 바로 처치 프레임). 이미 완료된 퀘스트는 처치 프레임 + "처치!".
+- 퀘스트 상세의 전투 장면(UI_GUIDE §5.6)에서는 캐릭터와 적이 3×로 마주 선다.
 - 매핑은 `components/game/monster/monster.ts`의 `monsterFor(type, stat)` (게임 규칙이 아닌 표현 매핑). 레벨 표기 `Lv.N` = 난이도.
 - 몬스터는 장식이다(`aria-hidden`) — 의미는 제목·태그·XP가 전달한다.
 
