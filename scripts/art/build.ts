@@ -8,6 +8,8 @@
  *   public/icons/icons.png, public/icons/glyphs.png
  *   src/components/game/character/sprite-sheets.generated.ts
  *   src/components/pixel/icons.generated.ts
+ *   public/sprites/monsters/<name>.png            idle, bob, defeated frames side by side
+ *   src/components/game/monster/monsters.generated.ts
  *   src/app/icon.png                               32×32 favicon (head crop, 2×)
  *   public/icons/app-{192,512}.png, src/app/apple-icon.png   opaque app icons (PWA)
  *   art/palette/life-32.gpl                        Aseprite/GIMP palette
@@ -17,6 +19,7 @@ import { dirname, join } from "node:path";
 
 import { ADVENTURER } from "../../art/characters/adventurer";
 import { GLYPHS, ICONS } from "../../art/icons";
+import { MONSTERS } from "../../art/monsters";
 import { LIFE_32, OUTFIT_PRESETS, type OutfitPreset } from "../../art/palette";
 import { SCENE_SPRITES } from "../../art/scene";
 import type { PixelGrid } from "../../art/types";
@@ -199,6 +202,58 @@ export type SceneSpriteName = keyof typeof SCENE_SPRITES;
   );
 }
 
+/* ───────── Monsters ───────── */
+
+/** 1ap down: the second idle frame. The bottom row must be empty so nothing is clipped. */
+function bobFrame(name: string, grid: PixelGrid): string[] {
+  const last = grid.at(-1) ?? "";
+  if (/[^.]/.test(last))
+    throw new Error(`monster.${name}: bottom row must be empty for the bob frame`);
+  return [".".repeat(last.length), ...grid.slice(0, -1)];
+}
+
+/** Defeated: every color mapped onto the ink ramp by brightness, outline kept. */
+function defeatedFrame(grid: PixelGrid): string[] {
+  const luma = new Map<string, number>(
+    LIFE_32.map(({ code, hex }) => {
+      const v = Number.parseInt(hex.slice(1), 16);
+      return [
+        code,
+        0.299 * ((v >> 16) & 255) + 0.587 * ((v >> 8) & 255) + 0.114 * (v & 255),
+      ] as const;
+    }),
+  );
+  const ink = (code: string) => {
+    if (code === "." || code === "O") return code;
+    const l = luma.get(code) ?? 0;
+    return l > 190 ? "w" : l > 120 ? "g" : l > 60 ? "m" : "n";
+  };
+  return grid.map((row) => [...row].map(ink).join(""));
+}
+
+function buildMonsters() {
+  const manifest: Record<string, { src: string; w: number; h: number; frames: number }> = {};
+  for (const [name, grid] of Object.entries(MONSTERS)) {
+    const size = { w: grid[0]?.length ?? 0, h: grid.length };
+    validateGrid(`monster.${name}`, grid, size);
+    const frames = [grid, bobFrame(name, grid), defeatedFrame(grid)];
+    const canvas = createCanvas(size.w * frames.length, size.h);
+    frames.forEach((frame, i) => drawGrid(canvas, frame, i * size.w, 0));
+    const file = `/sprites/monsters/${name}.png`;
+    write(join("public", file), encodePng(canvas));
+    manifest[name] = { src: file, ...size, frames: frames.length };
+  }
+  write(
+    "src/components/game/monster/monsters.generated.ts",
+    `${GENERATED_HEADER}
+/** Frames left to right: idle, bob (idle 2), defeated. */
+export const MONSTER_SHEETS = ${JSON.stringify(manifest, null, 2)} as const;
+
+export type MonsterName = keyof typeof MONSTER_SHEETS;
+`,
+  );
+}
+
 /* ───────── Open Graph background ───────── */
 
 /**
@@ -279,6 +334,7 @@ console.log("Building pixel art…");
 buildCharacter();
 buildIcons();
 buildScene();
+buildMonsters();
 const scene = buildOgScene();
 buildPalette();
 buildOgImage(scene).then(() => console.log("Done."));
