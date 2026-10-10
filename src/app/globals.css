@@ -9,6 +9,14 @@
     font-family: var(--font-sans);
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
+    /* Keyboard focus and scrollIntoView stop above the fixed bottom nav (h-16 + safe area). */
+    scroll-padding-bottom: calc(var(--spacing) * 20 + env(safe-area-inset-bottom));
+  }
+
+  @media (width >= 64rem) {
+    html {
+      scroll-padding-bottom: 0;
+    }
   }
 
   body {
