@@ -347,6 +347,10 @@
   .monster-idle {
     animation: monster-idle 900ms steps(1, end) infinite;
   }
+  /* Quest done: white hit flash ×2 with a 1ap shake, then the defeated frame sinks 1ap. */
+  .monster-defeat {
+    animation: monster-defeat 760ms steps(1, end) forwards;
+  }
   /* 1ap vertical bob in two steps (quest marker). */
   .pixel-bob {
     animation: pixel-bob 1200ms steps(1, end) infinite;
@@ -426,6 +430,34 @@
   }
 }
 
+@keyframes monster-defeat {
+  0% {
+    background-position: calc(var(--monster-w) * -3) 0;
+    transform: translateX(var(--monster-ap));
+  }
+  16% {
+    background-position: 0 0;
+    transform: translateX(calc(var(--monster-ap) * -1));
+  }
+  32% {
+    background-position: calc(var(--monster-w) * -3) 0;
+    transform: translateX(var(--monster-ap));
+  }
+  48% {
+    background-position: 0 0;
+    transform: translateX(0);
+  }
+  64% {
+    background-position: calc(var(--monster-w) * -3) 0;
+    transform: translateX(0);
+  }
+  80%,
+  100% {
+    background-position: calc(var(--monster-w) * -2) 0;
+    transform: translateY(var(--monster-ap));
+  }
+}
+
 @keyframes pixel-bob {
   50% {
     transform: translateY(calc(-1px * var(--pixel-scale, 4)));
@@ -496,6 +528,7 @@
   .pixel-skeleton,
   .pixel-bob,
   .monster-idle,
+  .monster-defeat,
   .pixel-twinkle,
   .pixel-flicker,
   .pixel-pop {

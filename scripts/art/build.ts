@@ -8,7 +8,7 @@
  *   public/icons/icons.png, public/icons/glyphs.png
  *   src/components/game/character/sprite-sheets.generated.ts
  *   src/components/pixel/icons.generated.ts
- *   public/sprites/monsters/<name>.png            idle, bob, defeated frames side by side
+ *   public/sprites/monsters/<name>.png            idle, bob, defeated, hit frames side by side
  *   src/components/game/monster/monsters.generated.ts
  *   src/app/icon.png                               32×32 favicon (head crop, 2×)
  *   public/icons/app-{192,512}.png, src/app/apple-icon.png   opaque app icons (PWA)
@@ -231,12 +231,17 @@ function defeatedFrame(grid: PixelGrid): string[] {
   return grid.map((row) => [...row].map(ink).join(""));
 }
 
+/** Hit: a one-frame ink-100 flash of the silhouette, outline kept (defeat sequence). */
+function hitFrame(grid: PixelGrid): string[] {
+  return grid.map((row) => row.replace(/[^.O]/g, "W"));
+}
+
 function buildMonsters() {
   const manifest: Record<string, { src: string; w: number; h: number; frames: number }> = {};
   for (const [name, grid] of Object.entries(MONSTERS)) {
     const size = { w: grid[0]?.length ?? 0, h: grid.length };
     validateGrid(`monster.${name}`, grid, size);
-    const frames = [grid, bobFrame(name, grid), defeatedFrame(grid)];
+    const frames = [grid, bobFrame(name, grid), defeatedFrame(grid), hitFrame(grid)];
     const canvas = createCanvas(size.w * frames.length, size.h);
     frames.forEach((frame, i) => drawGrid(canvas, frame, i * size.w, 0));
     const file = `/sprites/monsters/${name}.png`;
@@ -246,7 +251,7 @@ function buildMonsters() {
   write(
     "src/components/game/monster/monsters.generated.ts",
     `${GENERATED_HEADER}
-/** Frames left to right: idle, bob (idle 2), defeated. */
+/** Frames left to right: idle, bob (idle 2), defeated, hit (white flash). */
 export const MONSTER_SHEETS = ${JSON.stringify(manifest, null, 2)} as const;
 
 export type MonsterName = keyof typeof MONSTER_SHEETS;

@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { CharacterSprite, type OutfitPreset } from "@/components/game/character/CharacterSprite";
 import { deadlineStatus } from "@/components/game/deadline";
+import { BattleMonster } from "@/components/game/monster/BattleMonster";
+import { monsterFor } from "@/components/game/monster/monster";
 import { QUEST_TYPE_META } from "@/components/game/quest-meta";
 import { PixelFrame } from "@/components/pixel/PixelFrame";
 import { PixelIcon } from "@/components/pixel/PixelIcon";
@@ -229,6 +231,10 @@ function Active({
             >
               {i + 1}
             </span>
+            <BattleMonster
+              name={monsterFor(quest.type, quest.primaryStat).name}
+              defeated={isDone}
+            />
             <div className={cn("flex min-w-0 flex-1 flex-col gap-0.5", isDone && "opacity-60")}>
               <Link
                 href={`/quests/${quest.id}`}

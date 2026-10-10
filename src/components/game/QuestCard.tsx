@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils/cn";
 import { formatMinutes, formatXpGain } from "@/lib/utils/format";
 
 import { type DeadlineTone, deadlineStatus } from "./deadline";
-import { MonsterSprite } from "./monster/MonsterSprite";
+import { BattleMonster } from "./monster/BattleMonster";
 import { monsterFor } from "./monster/monster";
 import { QUEST_TYPE_META } from "./quest-meta";
 import { QuestTypeTag } from "./QuestTypeTag";
@@ -97,9 +97,9 @@ function EnemySlot({ quest }: { quest: QuestCardData }) {
   const boss = quest.type === "boss";
   return (
     <div className="flex w-20 shrink-0 flex-col items-center self-center text-center">
-      <MonsterSprite
+      <BattleMonster
         name={monster.name}
-        state={quest.completed ? "defeated" : "idle"}
+        defeated={Boolean(quest.completed)}
         scale={2}
         className={boss ? undefined : "my-1"}
       />

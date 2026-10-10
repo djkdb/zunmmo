@@ -16,7 +16,7 @@ describe("monsterFor", () => {
     const names = STATS.map((s) => MONSTER_BY_STAT[s].name);
     expect(new Set(names).size).toBe(STATS.length);
     for (const name of [...names, BOSS_MONSTER.name]) {
-      expect(MONSTER_SHEETS[name].frames).toBe(3);
+      expect(MONSTER_SHEETS[name].frames).toBe(4);
     }
   });
 });

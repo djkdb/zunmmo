@@ -7,8 +7,11 @@ import { MONSTER_SHEETS, type MonsterName } from "./monsters.generated";
 
 interface MonsterSpriteProps {
   name: MonsterName;
-  /** Idle bobs in two stepped frames (CSS only, frozen under reduced motion); defeated is the grey frame. */
-  state?: "idle" | "defeated";
+  /**
+   * Idle bobs in two stepped frames (CSS only, frozen under reduced motion); defeated is the grey
+   * frame; "defeating" plays the hit flash once and settles on the defeated frame.
+   */
+  state?: "idle" | "defeated" | "defeating";
   scale?: ScaleProp;
   className?: string;
 }
@@ -18,11 +21,12 @@ export function MonsterSprite({ name, state = "idle", scale = 2, className }: Mo
   const { src, w, h, frames } = MONSTER_SHEETS[name];
   const style = {
     "--monster-w": ap(w, scale),
+    "--monster-ap": ap(1, scale),
     width: ap(w, scale),
     height: ap(h, scale),
     backgroundImage: `url(${src})`,
     backgroundSize: `${ap(w * frames, scale)} ${ap(h, scale)}`,
-    backgroundPosition: state === "defeated" ? `calc(var(--monster-w) * -2) 0` : "0 0",
+    backgroundPosition: state === "idle" ? "0 0" : `calc(var(--monster-w) * -2) 0`,
     backgroundRepeat: "no-repeat",
   } as CSSProperties;
   return (
@@ -31,6 +35,7 @@ export function MonsterSprite({ name, state = "idle", scale = 2, className }: Mo
       className={cn(
         "pixel-art inline-block shrink-0",
         state === "idle" && "monster-idle",
+        state === "defeating" && "monster-defeat",
         className,
       )}
       style={style}
